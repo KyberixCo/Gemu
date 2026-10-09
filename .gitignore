@@ -1,0 +1,7 @@
+node_modules/
+frontend/dist/
+*.exe
+.DS_Store
+*.tsbuildinfo
+__pycache__/
+artifacts/audio/
