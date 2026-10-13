@@ -5,6 +5,7 @@ import (
 	"kyberix.com/gemu/internal/domain"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,20 +41,36 @@ func Discover(root string) ([]domain.Game, []error) {
 	seenRoots := map[string]bool{}
 	byID := map[string]domain.Game{}
 	for _, library := range roots {
-		library = filepath.Clean(library)
-		if seenRoots[library] {
+		if !filepath.IsAbs(library) {
+			diagnostics = append(diagnostics, fmt.Errorf("invalid relative Steam library path: %s", library))
 			continue
 		}
-		seenRoots[library] = true
-		paths, err := filepath.Glob(filepath.Join(library, "steamapps", "appmanifest_*.acf"))
+		library = filepath.Clean(library)
+		key := library
+		if runtime.GOOS == "windows" {
+			key = strings.ToLower(key)
+		}
+		if seenRoots[key] {
+			continue
+		}
+		seenRoots[key] = true
+		entries, err := os.ReadDir(filepath.Join(library, "steamapps"))
 		if err != nil {
 			diagnostics = append(diagnostics, err)
 			continue
 		}
-		for _, path := range paths {
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasPrefix(entry.Name(), "appmanifest_") || !strings.HasSuffix(entry.Name(), ".acf") {
+				continue
+			}
+			path := filepath.Join(library, "steamapps", entry.Name())
 			game, err := readManifest(path, library)
 			if err != nil {
 				diagnostics = append(diagnostics, fmt.Errorf("%s: %w", path, err))
+				continue
+			}
+			// Steam's shared redistributables are a support package, not a playable title.
+			if game.ID == "steam:228980" {
 				continue
 			}
 			if existing, ok := byID[game.ID]; ok {
@@ -91,6 +108,9 @@ func readManifest(path, root string) (domain.Game, error) {
 	}
 	installPath := filepath.Join(root, "steamapps", "common", dir)
 	info, statErr := os.Stat(installPath)
+	if statErr != nil && !os.IsNotExist(statErr) {
+		return domain.Game{}, fmt.Errorf("cannot inspect installation: %w", statErr)
+	}
 	installed := flags&4 != 0 && statErr == nil && info.IsDir()
 	return domain.Game{ID: "steam:" + id, Title: title, Installations: []domain.Installation{{Provider: "steam", ExternalID: id, Path: installPath, Installed: installed}}}, nil
 }

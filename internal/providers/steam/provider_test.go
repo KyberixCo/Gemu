@@ -1,0 +1,59 @@
+package steam
+
+import (
+	"context"
+	"kyberix.com/gemu/internal/domain"
+	"kyberix.com/gemu/internal/library"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestLocalProfileDoesNotReadAccountSecrets(t *testing.T) {
+	root := t.TempDir()
+	os.Mkdir(filepath.Join(root, "config"), 0755)
+	data := `"users" { "76561198000000001" { "PersonaName" "Player" "AccountName" "private-login" "RememberPassword" "1" } }`
+	if err := os.WriteFile(filepath.Join(root, "config", "loginusers.vdf"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	profiles, err := LocalProfiles(root)
+	if err != nil || len(profiles) != 1 || profiles[0].Name != "Player" || profiles[0].Origin != "local" {
+		t.Fatalf("profiles=%+v err=%v", profiles, err)
+	}
+}
+func TestAPIFirstAndLocalFallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("key") == "bad" {
+			w.WriteHeader(403)
+			return
+		}
+		switch r.URL.Path {
+		case "/ISteamUser/GetPlayerSummaries/v2/":
+			w.Write([]byte(`{"response":{"players":[{"steamid":"76561198000000001","personaname":"Remote"}]}}`))
+		case "/ISteamUserStats/GetPlayerAchievements/v1/":
+			w.Write([]byte(`{"playerstats":{"success":true,"achievements":[{"apiname":"FIRST","achieved":1,"unlocktime":123}]}}`))
+		case "/ISteamUserStats/GetSchemaForGame/v2/":
+			w.Write([]byte(`{"game":{"availableGameStats":{"achievements":[{"name":"FIRST","displayName":"First step","description":"Finish tutorial"}]}}}`))
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	p := NewProvider()
+	p.Client = server.Client()
+	p.apiURL = server.URL
+	profile := library.Profile{ID: "76561198000000001", Name: "Local", Origin: "local"}
+	game := domain.Game{ID: "steam:42"}
+	result := p.Player(context.Background(), game, profile, "key")
+	if result.Status != "ready" || result.Profile.Name != "Remote" || len(result.Achievements) != 1 || !result.Achievements[0].Unlocked || result.Achievements[0].Name != "First step" {
+		t.Fatalf("result=%+v", result)
+	}
+	for _, key := range []string{"", "bad"} {
+		result = p.Player(context.Background(), game, profile, key)
+		if result.Profile.Name != "Local" || result.Status == "ready" || len(result.Achievements) != 0 {
+			t.Fatalf("fallback=%+v", result)
+		}
+	}
+}

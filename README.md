@@ -52,8 +52,13 @@ Las prioridades son una navegación rápida, consumo moderado de recursos, recup
 - [Diseño de la experiencia](docs/design.md)
 - [Movimiento y sonido](docs/feedback.md)
 - [Gestión y contratos de integración](docs/management.md)
+- [Diseño del flujo de arte con mando](docs/artwork-flow.md)
 - [Guía de desarrollo](docs/development.md)
 
 ## Licencia
 
 Gemu se distribuye bajo la **GNU General Public License, versión 3 exclusivamente** (`GPL-3.0-only`). Consulta [LICENSE](LICENSE). Las dependencias y los recursos de terceros conservan sus respectivas licencias.
+
+## Acceso de ScreenScraper en el build
+
+Las credenciales de aplicación se cargan automáticamente desde `.env` o variables de entorno. Copia `.env.example` a `.env` y completa los valores antes de usar `./build.ps1` o `./dev.ps1`; no se necesita un flag. Parámetros y manejo de secretos en [Acceso de aplicación a ScreenScraper](docs/screenscraper-build.md).

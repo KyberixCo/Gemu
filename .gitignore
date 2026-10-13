@@ -5,3 +5,13 @@ frontend/dist/
 *.tsbuildinfo
 __pycache__/
 artifacts/audio/
+build/bin/
+frontend/wailsjs/
+artifacts/library/
+artifacts/go-cache/
+artifacts/development-data/
+artifacts/development-data-backup-*/
+internal/providers/content/screenscraper_build_local.go
+.env
+.env.local
+.env.*.local

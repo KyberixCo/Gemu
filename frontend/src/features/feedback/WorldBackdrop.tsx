@@ -3,16 +3,9 @@ import {artworksForGame,type Game,type GameArtwork} from '../../catalog';
 import { Scene } from '../../Scene';
 import { interfaceAudio } from './audio';
 import { sceneLighting } from './scene-lighting';
+import {prepareBackgroundArtwork} from '../../background-artwork';
 type ArtworkLayer={game:Game;artwork:GameArtwork};
 const layerKey=(layer:ArtworkLayer)=>`${layer.game.id}-${layer.artwork.id}`;
-async function prepareArtwork(artwork:GameArtwork){
- if(artwork.type==='procedural')return true;
- const image=new Image();image.src=artwork.src;
- let timer:ReturnType<typeof setTimeout>|undefined;
- try{
-  return await Promise.race([image.decode().then(()=>true,()=>false),new Promise<boolean>(resolve=>{timer=setTimeout(()=>resolve(false),4000);})]);
- }finally{clearTimeout(timer);}
-}
 export function WorldBackdrop({ game, reduced, enabled, active }: { game: Game; reduced: boolean;enabled:boolean;active:boolean }) {
  const root=useRef<HTMLDivElement>(null);
  useEffect(()=>{
@@ -34,10 +27,14 @@ export function WorldBackdrop({ game, reduced, enabled, active }: { game: Game; 
  },[enabled,active,reduced]);
  const [layers,setLayers] = useState<{current:ArtworkLayer;previous:ArtworkLayer|null}>({current:{game,artwork:artworksForGame(game)[0]},previous:null});
  useEffect(() => {
-  if (game.id === layers.current.game.id) return;
+  if (game.id === layers.current.game.id && JSON.stringify(artworksForGame(game)) === JSON.stringify(artworksForGame(layers.current.game))) return;
   let cancelled=false;
   const timer = setTimeout(async()=>{
-   const artwork=artworksForGame(game)[0];await prepareArtwork(artwork);
+   let artwork:GameArtwork={id:'fallback',type:'procedural',variant:0};
+   for(const candidate of artworksForGame(game)){
+    if(await prepareBackgroundArtwork(candidate)){artwork=candidate;break;}
+    if(cancelled)return;
+   }
    if(!cancelled)setLayers(previous=>({current:{game,artwork},previous:previous.current}));
   },reduced?0:120);
   return()=>{cancelled=true;clearTimeout(timer);};
@@ -50,7 +47,7 @@ export function WorldBackdrop({ game, reduced, enabled, active }: { game: Game; 
    const index=artworks.findIndex(art=>art.id===layers.current.artwork.id);
    for(let step=1;step<artworks.length;step++){
     const artwork=artworks[(index+step)%artworks.length];
-    const ready=await prepareArtwork(artwork);if(cancelled)return;
+    const ready=await prepareBackgroundArtwork(artwork);if(cancelled)return;
     if(ready){setLayers(previous=>({current:{game,artwork},previous:previous.current}));return;}
    }
   },18000);

@@ -1,10 +1,11 @@
+import {profileKey} from '../../profiles';
 import { useEffect, useState } from 'react';
 import { interfaceAudio } from './audio';
 import { isReducedMotion, parsePreferences, type FeedbackPreferences } from './preferences';
 const KEY = 'gemu.feedback';
 export function useFeedback(onError: (message:string) => void) {
  const [preferences,setPreferences] = useState<FeedbackPreferences>(() => {
-  try { return parsePreferences(localStorage.getItem(KEY)); } catch { return parsePreferences(null); }
+  try { return parsePreferences(localStorage.getItem(profileKey(KEY))); } catch { return parsePreferences(null); }
  });
  const [active,setActive] = useState(() => !document.hidden && document.hasFocus());
  const [systemReduced,setSystemReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -29,7 +30,7 @@ export function useFeedback(onError: (message:string) => void) {
  const updatePreferences = (patch: Partial<FeedbackPreferences>) => {
   const next = {...preferences,...patch};
   interfaceAudio.configure(next);setPreferences(next);
-  try { localStorage.setItem(KEY,JSON.stringify(next)); } catch { onError('No se pudieron guardar tus preferencias.'); }
+  try { localStorage.setItem(profileKey(KEY),JSON.stringify(next)); } catch { onError('No se pudieron guardar tus preferencias.'); }
  };
  return {preferences,updatePreferences,active,reduced:isReducedMotion(preferences.motion,systemReduced)};
 }

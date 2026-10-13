@@ -2,6 +2,27 @@
 
 Un launcher de videojuegos para convertir el PC en una experiencia de consola. Implementación inicial de [idea.md](../idea.md).
 
+## Aplicación de escritorio en Windows
+
+Requisitos: Go 1.25+, Node.js 22.12+ y la CLI Wails v2.16.0. Windows necesita WebView2 Runtime.
+
+```powershell
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+.\dev.ps1
+```
+
+Asegúrate de que la carpeta `go/bin` de tu usuario esté en PATH. El script se puede ejecutar desde cualquier directorio; acepta argumentos de `wails dev`. Wails instala las dependencias con `npm.cmd ci` e inicia Vite en `127.0.0.1:5173` con recarga en caliente.
+
+Para generar `build/bin/Gemu.exe`:
+
+```powershell
+./build.ps1
+```
+
+El [acceso de aplicación a ScreenScraper](screenscraper-build.md) se carga automáticamente desde `.env` en la raíz o variables de entorno. Copia `.env.example` a `.env` y completa las credenciales antes de compilar o iniciar desarrollo. La inyección es obligatoria por defecto, sin flags; no se solicita al usuario final.
+
+Los recursos compilados de `frontend/dist` se incluyen en el ejecutable. Antes de ejecutar directamente `go test ./...` o `go build`, genera esos recursos con `npm.cmd run build` desde `frontend`.
+
 ## Ejecutar la interfaz
 
 Requisitos: Node.js 22.12+ y npm.
@@ -38,9 +59,13 @@ Nueve WAV estéreo originales con reverberación y eco (aprox. 1,93 MB en total)
 
 ## Núcleo Go
 
-Requisitos: Go 1.23+.
+Requisitos: Go 1.25+.
 
 ```sh
+cd frontend
+npm.cmd ci
+npm.cmd run build
+cd ..
 go test ./...
 go run ./cmd/discover -steam-root '/ruta/a/Steam'
 ```
@@ -49,7 +74,7 @@ El inspector lee `libraryfolders.vdf` y manifiestos ACF, consulta múltiples bib
 
 ## Estado del primer corte
 
-Frontend y dominio Go están separados; todavía no están conectados. Pendientes para el siguiente corte vertical: host Wails con versión fijada, bindings, SQLite, descubrimiento de Steam en Windows, lanzamiento real, XInput, seguimiento del juego y recuperación del foco. No hay cambios al shell, registro ni inicio automático del equipo.
+La interfaz se ejecuta en un host Wails v2.16.0. El proceso genérico de importación está conectado a Gestión y al catálogo principal, con Steam como primer adaptador. Juegos, metadatos, arte y perfil se guardan en una biblioteca JSON versionada. Pendientes para el siguiente corte vertical: SQLite, lanzamiento real, XInput, seguimiento del juego y recuperación del foco. No hay cambios al shell, registro ni inicio automático del equipo.
 
 Consulta [las decisiones de diseño](design.md), [el plan de movimiento y sonido](feedback.md) y [el siguiente sprint](roadmap.md).
 
@@ -62,3 +87,16 @@ Consulta [las decisiones de diseño](design.md), [el plan de movimiento y sonido
 ## Licencia
 
 Gemu se distribuye bajo la GNU General Public License, versión 3 exclusivamente (`GPL-3.0-only`). Consulta el texto completo en [LICENSE](../LICENSE). Las dependencias y los recursos de terceros conservan sus respectivas licencias.
+
+## Consultar Steam desde el host
+
+Abre `dev.ps1` y entra en **Gestión → Juegos → Steam → Configurar Steam**. La detección automática es la opción principal. También puedes elegir **Configurar carpeta manualmente** e indicar una ruta absoluta a la carpeta que contiene `steamapps`. Puedes cambiar la carpeta tras una detección fallida o desde la revisión. Ambos caminos consultan y validan las bibliotecas antes de guardar. Elige el perfil, añade una clave API opcional y continúa para obtener metadatos, arte y logros. Revisa el resultado y pulsa **Finalizar e incorporar juegos** para publicar la biblioteca. Cancelar o volver con B/Escape descarta el asistente sin modificar la configuración. Si hay un error puedes reintentar. Finalizar reemplaza los juegos de esta fuente y conserva las otras fuentes y sus borradores. Los títulos aparecen en Jugar y persisten tras reiniciar. El lanzamiento sigue pendiente. Consulta [Importación de bibliotecas](library-import.md) para contratos, API, fallback y almacenamiento.
+
+Para inspeccionar el mismo resultado desde PowerShell:
+
+```powershell
+go run ./cmd/discover
+go run ./cmd/discover -steam-root 'C:\Program Files (x86)\Steam'
+```
+
+El JSON contiene `root`, `games`, `installedCount` y `diagnostics`. Cada juego conserva `ID`, `Title` e `Installations`; la presencia de un manifiesto no basta para marcarlo instalado: también se comprueba el estado y la carpeta local.

@@ -33,3 +33,19 @@ Audio y luz comparten el transporte de la composición procedural a 56 BPM. La r
 Ambiente, volumen ambiental e iluminación tienen preferencias independientes. Silenciar ambiente no obliga a detener la atmósfera visual; sin audio usa un reloj visual suave. El volumen de interfaz no cambia el volumen ambiental. El ambiente baja temporalmente bajo confirmaciones.
 
 El análisis textual y las reglas de transición están en [Composición procedural por juego](procedural-music.md). Se conserva la atmósfera angelical con variación y espacios de descanso.
+
+## Superficies e interacción · revisión del 12 de octubre de 2026
+
+La interfaz adopta superficies planas y esquinas rectas. Perfiles, gestión y ajustes se organizan mediante espacio, jerarquía tipográfica y separadores tenues, sin marcos alrededor de cada tarjeta o formulario. Los campos editables usan un fondo ligeramente distinto; la acción principal concentra el relleno ácido. Las formas circulares se reservan para avatares y representaciones de botones físicos del mando.
+
+Hover, foco y selección tienen funciones distintas:
+
+- Hover: cambio tenue de luminosidad o fondo, sin elevar ni ampliar el control.
+- Foco de navegación: una marca ácida en un único borde acompañada de glow suave, visible con teclado y mando, sin contorno completo. Sobre la acción principal la marca es oscura para conservar contraste.
+- Selección guardada: texto ácido, glow de menor intensidad y, en opciones y pestañas, un subrayado. No compite en intensidad con el foco actual.
+
+Las portadas mantienen su arte sin marcos; el foco se dibuja sobre su borde inferior con luz difusa. Se oculta el índice decorativo del escenario, conservando el indicador de posición de la biblioteca. Los perfiles se presentan como una lista abierta y comparten los colores de la consola. El glow se conserva como parte de la identidad gaming, sin escalado ni pulsaciones continuas.
+
+Las portadas importadas se reservan para las miniaturas y no participan en la rotación del escenario. Los fondos rasterizados se validan por sus dimensiones reales al cargar: al menos 1280 × 720 píxeles y anchura mayor que altura. Las imágenes pequeñas, verticales o que no se pueden cargar se descartan como fondo, incluso en bibliotecas ya guardadas. Si no existe un fondo válido se conserva el escenario procedural de respaldo. Este umbral es un mínimo de calidad; la calibración en pantallas 4K sigue pendiente.
+
+Validación: compilación de producción y 88 pruebas del frontend correctas. La inspección visual sigue pendiente: el servidor local funciona, pero esta sesión no dispone de navegador conectado. Revisar en WebView2 la legibilidad a distancia y el recorrido con mando antes de considerar cerrado el pulido visual.

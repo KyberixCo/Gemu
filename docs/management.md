@@ -1,4 +1,6 @@
-# Centro de gestión · primer corte visual
+# Centro de gestión
+
+**Estado actual de Juegos:** el asistente genérico importa juegos reales, metadatos, arte y perfiles mediante el backend. Steam es el primer adaptador; los demás siguen pendientes. Ver [Importación de bibliotecas](library-import.md). Las secciones siguientes conservan el diseño de los gestores que aún funcionan como borradores.
 
 Acceso desde **Gestión** en la barra lateral. Tres secciones con navegación por teclado y mando, diseño adaptable y formularios de demostración. Las configuraciones se guardan explícitamente en `gemu.management.v1` en localStorage. Las claves API permanecen en memoria y no forman parte del objeto persistido. Las fichas editadas y las rutas de arte son borradores separados del catálogo visible. No se detectan instalaciones, ejecutan emuladores, descargan imágenes ni llaman proveedores LLM.
 
@@ -38,13 +40,15 @@ Backend requerido: identificar dispositivos estables y capacidades USB/Bluetooth
 
 La entrada abre **Metadatos**. La navegación separa Fuentes de juegos, Controles, Metadatos, Fuentes de metadatos, Fuentes de arte y Asistente. El encabezado señala cambios pendientes y habilita el guardado solo cuando hay modificaciones. Las fichas editadas se identifican en el listado.
 
-Los gestores incluyen IGDB y ScreenScraper para metadatos, SteamGridDB, ScreenScraper y archivos propios para arte. Activación y prioridad se guardan dentro de `gemu.management.v1.contentProviders`; las configuraciones antiguas reciben valores por defecto. ScreenScraper comparte preferencias y credenciales entre ambos gestores. Cada proveedor enlaza su documentación oficial. Todas las credenciales viven en memoria y pueden borrarse por proveedor. Una configuración habilitada nunca se presenta como conexión verificada. La prioridad queda configurada, sin consultas automáticas todavía.
+Los gestores incluyen IGDB y ScreenScraper para metadatos, SteamGridDB, ScreenScraper y archivos propios para arte. Activación y prioridad se guardan dentro de `gemu.management.v1.contentProviders`; las configuraciones antiguas reciben valores por defecto. ScreenScraper comparte preferencias y credenciales entre ambos gestores. Cada proveedor enlaza su documentación oficial. Los valores nuevos viven en memoria; el gestor seguro permite persistirlos cifrados con DPAPI por perfil y eliminarlos por proveedor. La interfaz recibe solo su estado, no los secretos guardados. Una configuración habilitada nunca se presenta como conexión verificada. ScreenScraper y SteamGridDB ya se consultan durante la importación y ofrecen Probar acceso; detalles en [Integraciones de contenido](content-providers.md).
 
 **Mejorar con el agente → Preparar mejora · demo** abre una comparación del valor actual y la propuesta por campo. La demo limpia espacios, sin LLM ni información inventada. Permite editar la propuesta, elegir campos explícitamente, aceptarlos al borrador o descartarla. No se guarda ni aplica al catálogo automáticamente; después hay que usar Guardar cambios. Cambiar de juego descarta la propuesta pendiente de revisión. Las propuestas no se persisten ni contienen secretos.
 
-Para activar operaciones reales queda pendiente el host: intercambio OAuth de IGDB, credenciales de desarrollador y cuenta de ScreenScraper, búsquedas de arte, descarga validada, llamadas LLM y procedencia por campo. Referencias: https://api-docs.igdb.com/, https://www.screenscraper.fr/webapi2.php y https://www.steamgriddb.com/api/v2.
+Quedan pendientes el intercambio OAuth de IGDB, llamadas LLM, edición manual del arte publicado y procedencia por campo de metadatos. ScreenScraper y SteamGridDB cuentan con búsquedas, descarga validada y procedencia por imagen; requieren configurar credenciales propias para validar las consultas reales. Referencias: https://api-docs.igdb.com/, https://www.screenscraper.fr/webapi2.php y https://www.steamgriddb.com/api/v2.
 
 ## Gestión para televisión
+
+El flujo dedicado de arte está especificado en [Obtener y elegir arte con mando](artwork-flow.md): entrada desde la ficha y Gestión → Metadatos, búsqueda, selección de imágenes, comparación y guardado; lotes para completar faltantes. La búsqueda, elección y guardado individual, completar faltantes, cancelación y deshacer ya están implementados. La importación de Steam sigue siendo otra vía de descarga.
 
 La gestión abre un menú de seis tareas: Juegos, Emuladores, Metadatos, Proveedores, Controles y Asistente. El área de trabajo ocupa el espacio entre el encabezado y la barra fija de acciones, sin desplazamiento vertical de la página. Las rutas de edición sustituyen el contenido en vez de acumular tarjetas. Se conservan el esquema de persistencia y las preferencias previas.
 
@@ -59,3 +63,5 @@ Verificación: compilación y suite de pruebas. Pendiente revisión visual a 720
 El foco incluye borde lima, glow exterior e interior y una ampliación leve en tarjetas y filas. Se aplica también al foco programático del mando. Las selecciones confirmadas conservan un halo de menor intensidad para distinguirlas del objetivo actual. La pulsación da una respuesta breve de escala; el cambio de pantalla/editor usa fundido y el encabezado una entrada corta. Propuestas y grupos de ajustes repiten la transición al cambiar de campo o página. Los botones del dibujo mantienen su posición absoluta.
 
 El modo de movimiento reducido elimina animaciones y cambios de escala, conservando el borde y el glow estáticos. No hay pulsación luminosa continua. Compilación verificada; ajuste visual del halo en un televisor físico pendiente.
+
+El gestor central se encuentra en Gestión → Credenciales. Detalles de protección, uso y recuperación en [Gestor seguro de credenciales](credentials.md).

@@ -10,23 +10,16 @@ import (
 )
 
 func main() {
-	root := flag.String("steam-root", "", "Steam installation directory (required)")
+	root := flag.String("steam-root", "", "Steam installation/library directory (empty: detect on Windows)")
 	flag.Parse()
-	if *root == "" {
-		fmt.Fprintln(os.Stderr, "usage: go run ./cmd/discover -steam-root <directory>")
-		os.Exit(2)
-	}
-	if info, err := os.Stat(*root); err != nil || !info.IsDir() {
-		fmt.Fprintln(os.Stderr, "Steam directory is not accessible")
-		os.Exit(1)
-	}
-	games, diagnostics := steam.Discover(*root)
-	for _, err := range diagnostics {
+	report, err := steam.Inspect(*root)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(games); err != nil {
+	if err := encoder.Encode(report); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

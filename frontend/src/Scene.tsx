@@ -1,17 +1,18 @@
 import {useId,useState} from 'react';
 import {artworksForGame,type Game,type GameArtwork} from './catalog';
+import {isBackgroundSize} from './background-artwork';
 
 // Original vector environments, shared by the stage and miniature game tiles.
 export function Scene({ game, miniature = false,artwork }: { game: Game; miniature?: boolean;artwork?:GameArtwork }) {
- const instance=useId(),[failed,setFailed]=useState<string>();
- const art=artwork??artworksForGame(game)[0];
+ const instance=useId(),[failed,setFailed]=useState<string>(),[ready,setReady]=useState<string>();
+ const art=artwork??(miniature&&game.cover?{id:'cover',type:'image' as const,src:game.cover}:artworksForGame(game)[0]);
  const id = `${miniature ? 'tile' : 'stage'}-${game.id}-${instance.replace(/:/g,'')}`;
  const variant=art.type==='procedural'?art.variant:0;
  const space = game.id === 'astral' || game.id === 'orbit';
  const forest = game.id === 'wild';
  const city = game.id === 'drift';
  const sea = game.id === 'tide';
- if(art.type==='image'&&failed!==art.src)return <img className="scene" src={art.src} style={{objectFit:'cover',objectPosition:art.position??'center'}} alt="" aria-hidden="true" draggable={false} onError={()=>setFailed(art.src)}/>;
+ if(art.type==='image'&&failed!==art.src)return <img className="scene" src={art.src} style={{objectFit:miniature?'contain':'cover',objectPosition:art.position??'center',visibility:miniature||ready===art.src?'visible':'hidden'}} alt="" aria-hidden="true" draggable={false} onLoad={event=>{const image=event.currentTarget;if(miniature||isBackgroundSize(image.naturalWidth,image.naturalHeight))setReady(art.src);else setFailed(art.src);}} onError={()=>setFailed(art.src)}/>;
  return <svg className="scene" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
  <defs>
   <linearGradient id={`${id}-sky`} x2="0.2" y2="1"><stop stopColor={variant===2?'#171d36':space?'#080f1d':city?'#151225':sea?'#244b55':forest?'#7d9b8b':'#453b35'}/><stop offset="1" stopColor={variant===1?'#899ba0':game.color}/></linearGradient>
