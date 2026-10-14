@@ -36,6 +36,7 @@ type gridAsset struct {
 	Width, Height, Score int
 	NSFW, Humor          bool
 	Mime                 string
+	Language             string
 	Author               struct{ Name string }
 }
 type gridResponse[T any] struct {
@@ -104,6 +105,37 @@ func (p *SteamGridDB) gameID(ctx context.Context, game domain.Game, key string) 
 	return match, nil
 }
 func (p *SteamGridDB) Fetch(ctx context.Context, game domain.Game, credentials map[string]string) (library.ContentResult, error) {
+	return p.FetchLocalized(ctx, game, credentials, "")
+}
+func languageCode(language string) string {
+	normalized := strings.ToLower(strings.TrimSpace(language))
+	parts := strings.FieldsFunc(normalized, func(r rune) bool { return r == '-' || r == '_' || r == ' ' || r == '(' })
+	if len(parts) > 0 {
+		switch parts[0] {
+		case "en", "eng":
+			return "en"
+		case "es", "spa":
+			return "es"
+		case "ar", "ara":
+			return "ar"
+		}
+	}
+	switch normalized {
+	case "en", "eng", "english", "inglés", "ingles":
+		return "en"
+	case "es", "spa", "spanish", "español", "espanol":
+		return "es"
+	case "ar", "ara", "arabic", "العربية":
+		return "ar"
+	default:
+		return ""
+	}
+}
+func languageMatches(asset, preferred string) bool {
+	want, got := languageCode(preferred), languageCode(asset)
+	return want == "" || got == "" || want == got
+}
+func (p *SteamGridDB) FetchLocalized(ctx context.Context, game domain.Game, credentials map[string]string, language string) (library.ContentResult, error) {
 	result := library.ContentResult{}
 	key, err := gridKey(credentials)
 	if err != nil {
@@ -143,6 +175,9 @@ func (p *SteamGridDB) Fetch(ctx context.Context, game domain.Game, credentials m
 		accepted := 0
 		for _, asset := range response.Data {
 			if asset.NSFW || asset.Humor || asset.Mime != "image/png" && asset.Mime != "image/jpeg" {
+				continue
+			}
+			if !languageMatches(asset.Language, language) {
 				continue
 			}
 			if category.kind == "background" && !library.BackgroundSize(asset.Width, asset.Height) {

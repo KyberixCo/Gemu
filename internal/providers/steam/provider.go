@@ -98,14 +98,19 @@ func (p *Provider) get(ctx context.Context, address string, out interface{}) err
 
 var markup = regexp.MustCompile(`<[^>]*>`)
 
-func (p *Provider) Metadata(ctx context.Context, game domain.Game) (library.Metadata, error) {
+func (p *Provider) Metadata(ctx context.Context, game domain.Game, language string) (library.Metadata, error) {
 	id := strings.TrimPrefix(game.ID, "steam:")
 	if !ValidAppID(id) {
 		return library.Metadata{}, fmt.Errorf("AppID inválido")
 	}
+	storeLanguage := "spanish"
+	if language == "en" {
+		storeLanguage = "english"
+	}
 	var result map[string]struct {
 		Success bool
 		Data    struct {
+			Name             string `json:"name"`
 			ShortDescription string `json:"short_description"`
 			HeaderImage      string `json:"header_image"`
 			Background       string
@@ -116,7 +121,7 @@ func (p *Provider) Metadata(ctx context.Context, game domain.Game) (library.Meta
 			Genres []struct{ Description string }
 		}
 	}
-	if err := p.get(ctx, p.storeURL+"/api/appdetails?appids="+id+"&l=spanish", &result); err != nil {
+	if err := p.get(ctx, p.storeURL+"/api/appdetails?appids="+id+"&l="+storeLanguage, &result); err != nil {
 		return library.Metadata{}, err
 	}
 	app, ok := result[id]
@@ -131,12 +136,16 @@ func (p *Provider) Metadata(ctx context.Context, game domain.Game) (library.Meta
 	if background == "" && len(app.Data.Screenshots) > 0 {
 		background = app.Data.Screenshots[0].PathFull
 	}
-	return library.Metadata{Description: html.UnescapeString(markup.ReplaceAllString(app.Data.ShortDescription, "")), Genres: genres, Cover: app.Data.HeaderImage, Background: background, Origin: "steam-store", Status: "ready"}, nil
+	return library.Metadata{Title: strings.TrimSpace(app.Data.Name), Description: html.UnescapeString(markup.ReplaceAllString(app.Data.ShortDescription, "")), Genres: genres, Cover: app.Data.HeaderImage, Background: background, Origin: "steam-store", Status: "ready"}, nil
 }
 func (p *Provider) api(ctx context.Context, path string, values url.Values, out interface{}) error {
 	return p.get(ctx, p.apiURL+path+"?"+values.Encode(), out)
 }
 func (p *Provider) Player(ctx context.Context, game domain.Game, profile library.Profile, key string) library.PlayerState {
+	return p.PlayerLocalized(ctx, game, profile, key, "es")
+}
+
+func (p *Provider) PlayerLocalized(ctx context.Context, game domain.Game, profile library.Profile, key, language string) library.PlayerState {
 	state := library.PlayerState{Profile: profile, Status: "pending", Achievements: []library.Achievement{}}
 	if profile.ID == "" {
 		state.Message = "Selecciona un perfil para sincronizar logros."
@@ -163,7 +172,11 @@ func (p *Provider) Player(ctx context.Context, game domain.Game, profile library
 		}
 	}
 	id := strings.TrimPrefix(game.ID, "steam:")
-	values := url.Values{"key": {key}, "appid": {id}, "steamid": {profile.ID}, "l": {"spanish"}}
+	storeLanguage := "spanish"
+	if language == "en" {
+		storeLanguage = "english"
+	}
+	values := url.Values{"key": {key}, "appid": {id}, "steamid": {profile.ID}, "l": {storeLanguage}}
 	var result struct {
 		PlayerStats struct {
 			Success      bool

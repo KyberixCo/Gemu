@@ -30,11 +30,13 @@ func main() {
 	service := library.New(dir, sources)
 	app := &App{profiles: profiles.New(dir), sources: sources, dir: dir}
 	if err := wails.Run(&options.App{
-		Title: "Gemu",
-		Width: 1280, Height: 720,
+		Title:      "Gemu",
+		Fullscreen: true,
+		Width:      1280, Height: 720,
 		MinWidth: 960, MinHeight: 540,
 		AssetServer:      &assetserver.Options{Assets: assets, Handler: service, Middleware: service.Middleware},
 		Bind:             []interface{}{app},
+		OnStartup:        app.startup,
 		BackgroundColour: &options.RGBA{R: 10, G: 12, B: 18, A: 255},
 	}); err != nil {
 		log.Fatal(err)

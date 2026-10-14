@@ -4,6 +4,8 @@ La configuración de proveedores usa asistentes reutilizables. El mismo `Provide
 
 ## Primera configuración
 
+Antes de este recorrido, el asistente de perfiles permite crear el perfil inicial desde una cuenta Steam local. El nombre se sugiere de forma editable y se usa el avatar en caché si está disponible; la creación manual sigue disponible cuando Steam no está instalado o no se detectan cuentas.
+
 Después de crear el perfil, `FirstRunSetup` guía por cuatro etapas:
 
 1. **Tu consola:** explica qué se puede configurar y permite posponerlo.

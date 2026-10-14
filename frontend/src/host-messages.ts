@@ -1,0 +1,138 @@
+// Host messages remain canonical in saved snapshots so they can be translated
+// at display time, including diagnostics from older library imports.
+export const hostMessages:Record<string,string>={
+ 'selecciona un perfil de Gemu':'select a Gemu profile',
+ 'el perfil cambió; repite la búsqueda de arte':'the profile changed; search for artwork again',
+ 'gestor de credenciales no disponible':'credential manager unavailable',
+ 'origen de arte no permitido':'artwork source not allowed',
+ 'redirección de arte rechazada':'artwork redirect rejected',
+ 'redirección rechazada':'redirect rejected',
+ 'no se pudo descargar arte':'could not download artwork',
+ 'arte HTTP {code}':'artwork HTTP {code}',
+ 'arte demasiado grande o inválido':'artwork too large or invalid',
+ 'formato de arte no permitido':'artwork format not allowed',
+ 'elige juegos y al menos un proveedor de arte':'choose games and at least one artwork provider',
+ 'algún juego ya no está disponible':'a game is no longer available',
+ 'cierra las búsquedas anteriores antes de continuar':'close previous searches before continuing',
+ 'Proveedor pendiente por acceso o cuota':'Provider pending due to access or quota',
+ 'No se pudo descargar una imagen de {provider}':'Could not download an image from {provider}',
+ 'la búsqueda expiró; repítela':'the search expired; try again',
+ 'termina la búsqueda antes de guardar':'finish the search before saving',
+ 'selección de juego duplicada':'duplicate game selection',
+ 'el arte cambió durante la revisión; repite la búsqueda':'artwork changed during review; search again',
+ 'selección de arte inválida':'invalid artwork selection',
+ 'la imagen ya no falta':'the image is no longer missing',
+ 'elige hasta tres fondos adicionales':'choose up to three additional backgrounds',
+ 'fondo de rotación inválido':'invalid rotation background',
+ 'no hay imágenes seleccionadas':'no images selected',
+ 'no hay un cambio de arte para deshacer':'no artwork change to undo',
+ 'el arte cambió después; no se puede deshacer sin revisar':'artwork changed afterward; review it before undoing',
+ 'el juego ya no está disponible':'the game is no longer available',
+ 'perfiles guardados inválidos':'invalid saved profiles',
+ 'usa un nombre de 1 a 32 caracteres':'use a name with 1 to 32 characters',
+ 'ya existe un perfil con ese nombre':'a profile with that name already exists',
+ 'imagen de perfil inválida':'invalid profile image',
+ 'el perfil no existe':'profile does not exist',
+ 'la detección automática de Steam requiere Windows; indica una carpeta':'automatic Steam detection requires Windows; specify a folder',
+ 'la carpeta de Steam debe ser una ruta absoluta':'the Steam folder must be an absolute path',
+ 'la carpeta no contiene una biblioteca Steam accesible (steamapps)':'the folder does not contain an accessible Steam library (steamapps)',
+ 'no se encontró Steam; indica la carpeta de instalación o biblioteca':'Steam was not found; specify the installation or library folder',
+ 'el perfil seleccionado ya no está disponible':'the selected profile is no longer available',
+ 'Se muestran los últimos logros guardados.':'Showing the last saved achievements.',
+ 'hay demasiadas importaciones pendientes; cierra los asistentes anteriores':'too many pending imports; close previous wizards',
+ 'biblioteca guardada inválida':'invalid saved library',
+ 'versión de biblioteca no compatible':'unsupported library version',
+ 'la importación expiró; repite el asistente':'the import expired; run the wizard again',
+ 'fuente no compatible':'unsupported source',
+ 'solicitud inválida':'invalid request',
+ 'no se pudo conectar con el proveedor':'could not connect to the provider',
+ 'credenciales rechazadas o acceso no permitido':'credentials rejected or access denied',
+ 'servicio ocupado o cuota agotada; inténtalo más tarde':'service busy or quota exhausted; try again later',
+ 'juego o recurso no encontrado':'game or resource not found',
+ 'servicio HTTP {code}':'service HTTP {code}',
+ 'respuesta del proveedor inválida':'invalid provider response',
+ 'servicio no disponible':'service unavailable',
+ 'proveedor no disponible':'provider unavailable',
+ 'proveedor no compatible':'unsupported provider',
+ 'metadatos no disponibles':'metadata unavailable',
+ 'arte no disponible':'artwork unavailable',
+ 'imagen inválida o resolución insuficiente':'invalid image or insufficient resolution',
+ 'respuesta sin confirmar':'unconfirmed response',
+ 'falta la clave API':'API key missing',
+ 'la API no confirmó el acceso':'the API did not confirm access',
+ 'AppID de Steam inválido':'invalid Steam AppID',
+ 'AppID inválido':'invalid AppID',
+ 'juego no encontrado':'game not found',
+ 'varias coincidencias; no se asignó arte':'multiple matches; no artwork assigned',
+ 'sin coincidencia exacta':'no exact match',
+ 'varias coincidencias; no se asignaron datos':'multiple matches; no data assigned',
+ 'sin coincidencia exacta para PC Windows':'no exact match for PC Windows',
+ 'varios sistemas PC Windows en el catálogo de ScreenScraper':'multiple PC Windows systems in the ScreenScraper catalog',
+ 'sistema PC Windows no encontrado':'PC Windows system not found',
+ 'esta compilación de Gemu no incluye acceso de aplicación a ScreenScraper; el responsable debe configurarlo al compilar':'this Gemu build does not include ScreenScraper application access; the maintainer must configure it at build time',
+ 'completa usuario y contraseña':'complete username and password',
+ 'ScreenScraper rechazó la configuración de la consulta (HTTP 400)':'ScreenScraper rejected the query configuration (HTTP 400)',
+ 'ScreenScraper restringió el acceso (HTTP 401). Comprueba la cuenta personal; el servicio puede estar saturado':'ScreenScraper restricted access (HTTP 401). Check your personal account; the service may be overloaded',
+ 'ScreenScraper rechazó las credenciales de desarrollador de Gemu (HTTP 403). No uses aquí tu usuario y contraseña personales':'ScreenScraper rejected Gemu developer credentials (HTTP 403). Do not use your personal username and password here',
+ 'ScreenScraper está temporalmente cerrado (HTTP 423). Inténtalo más tarde':'ScreenScraper is temporarily closed (HTTP 423). Try again later',
+ 'ScreenScraper bloqueó el acceso de la aplicación (HTTP 426). El responsable de Gemu debe revisar su registro con ScreenScraper':'ScreenScraper blocked application access (HTTP 426). The Gemu maintainer must review its ScreenScraper registration',
+ 'ScreenScraper está ocupado o alcanzó el límite de consultas (HTTP 429). Espera antes de volver a probar':'ScreenScraper is busy or reached its request limit (HTTP 429). Wait before trying again',
+ 'Se alcanzó la cuota diaria de ScreenScraper. Vuelve a intentarlo cuando el servicio renueve la cuota':'ScreenScraper daily quota reached. Try again when the service renews the quota',
+ 'No se pudieron leer los perfiles locales de Steam.':'Could not read local Steam profiles.',
+ 'Selecciona un perfil para sincronizar logros.':'Select a profile to sync achievements.',
+ 'Perfil local asociado. Falta una clave API para consultar logros.':'Local profile linked. An API key is needed to fetch achievements.',
+ 'Logros no disponibles por API. Se conserva el perfil local; no hay un registro local fiable de logros.':'Achievements unavailable through the API. The local profile is kept; there is no reliable local achievement record.',
+ 'Logros sincronizados desde Steam.':'Achievements synced from Steam.',
+ 'datos inválidos':'invalid data',
+ 'protección de Windows no disponible':'Windows protection unavailable',
+ 'proveedor de credenciales no compatible':'unsupported credential provider',
+ 'campo de credencial inválido':'invalid credential field',
+ 'no se pudo abrir el almacén de credenciales':'could not open the credential vault',
+ 'almacén de credenciales inválido':'invalid credential vault',
+ 'no se pudieron descifrar las credenciales de este perfil':'could not decrypt credentials for this profile',
+ 'no se pudieron preparar las credenciales':'could not prepare credentials',
+ 'no se pudieron proteger las credenciales; no se guardaron':'could not protect credentials; they were not saved',
+ 'almacén de credenciales demasiado grande':'credential vault too large',
+ 'no se pudo crear el almacén de credenciales':'could not create the credential vault',
+ 'no se pudo guardar el almacén de credenciales':'could not save the credential vault',
+ 'introduce al menos una credencial nueva':'enter at least one new credential',
+ 'no hay un almacén seguro disponible en este sistema operativo':'no credential vault is available on this operating system',
+ 'Abre la aplicación de escritorio para configurar tu biblioteca.':'Open the desktop application to set up your library.',
+ 'Esta ventana de Gemu usa una versión anterior del host. Cierra Gemu y reinicia dev.ps1, o abre el ejecutable actualizado. Recargar la interfaz no actualiza el host. Las credenciales de sesión deberán introducirse de nuevo.':'This Gemu window uses an older host version. Close Gemu and restart dev.ps1, or open the updated executable. Reloading the interface does not update the host. Session credentials must be entered again.',
+ 'Reinicia Gemu con dev.ps1 o abre el ejecutable actualizado para usar el gestor seguro de credenciales. Recargar la interfaz no actualiza el host.':'Restart Gemu with dev.ps1 or open the updated executable to use the credential manager. Reloading the interface does not update the host.',
+ 'El host no tiene los métodos actuales. Cierra Gemu y vuelve a ejecutar dev.ps1.':'The host does not have the current methods. Close Gemu and run dev.ps1 again.',
+ 'Reinicia Gemu con dev.ps1 para usar la búsqueda de arte. Recargar la interfaz no actualiza el host.':'Restart Gemu with dev.ps1 to search for artwork. Reloading the interface does not update the host.',
+};
+
+const technicalSpanish:Record<string,string>={
+ 'Steam installation unavailable or invalid':'Instalación de Steam no disponible o inválida',
+ 'avatar cache file is too large':'El archivo de imagen de perfil es demasiado grande',
+ 'unterminated VDF string':'Cadena VDF sin terminar',
+ 'unexpected closing brace':'Llave de cierre inesperada',
+ 'unclosed VDF block':'Bloque VDF sin cerrar',
+ 'invalid relative Steam library path':'Ruta relativa de biblioteca Steam inválida',
+ 'invalid Steam manifest identity or install directory':'Identidad del manifiesto Steam o carpeta de instalación inválida',
+ 'invalid installation flags':'Indicadores de instalación inválidos',
+ 'cannot inspect installation':'No se pudo inspeccionar la instalación',
+};
+
+export function translateHostMessage(text:string,language:'es'|'en'):string {
+ const catalog=language==='en'?hostMessages:technicalSpanish;
+ if(Object.hasOwn(catalog,text))return catalog[text];
+ // Known variable messages are matched as a whole; paths and provider names
+ // are inserted literally rather than translated or interpreted as templates.
+ const http=/^(arte|servicio) HTTP (\d+)$/.exec(text);
+ if(http)return language==='es'?text:hostMessages[`${http[1]} HTTP {code}`].replace('{code}',()=>http[2]);
+ const download=/^No se pudo descargar una imagen de (.+)$/.exec(text);
+ if(download)return language==='es'?text:hostMessages['No se pudo descargar una imagen de {provider}'].replace('{provider}',()=>download[1]);
+ const missing=/^missing value for (.+)$/.exec(text);
+ if(missing)return language==='en'?text:'Falta un valor para '+missing[1];
+ const cached='Se muestran los últimos logros guardados. ';
+ if(text.startsWith(cached))return (catalog[cached.trim()]??cached.trim())+' '+translateHostMessage(text.slice(cached.length),language);
+ // Translate only recognized diagnostic segments; retain unknown technical
+ // details (including filesystem paths and network errors) for troubleshooting.
+ const boundary=[': ',' · '].map(separator=>({separator,index:text.indexOf(separator)})).filter(item=>item.index>=0).sort((a,b)=>a.index-b.index)[0];
+ if(boundary){const {separator,index}=boundary,head=text.slice(0,index),tail=text.slice(index+separator.length);return (Object.hasOwn(catalog,head)?catalog[head]:head)+separator+translateHostMessage(tail,language);}
+ if(text.startsWith('Error: '))return 'Error: '+translateHostMessage(text.slice(7),language);
+ return text;
+}

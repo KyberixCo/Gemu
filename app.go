@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"kyberix.com/gemu/internal/credentials"
+	"kyberix.com/gemu/internal/launcher"
 	"kyberix.com/gemu/internal/library"
 	"kyberix.com/gemu/internal/profiles"
 	"kyberix.com/gemu/internal/providers/content"
@@ -15,6 +16,8 @@ import (
 
 // Each selected Gemu profile owns its library and Steam association.
 type App struct {
+	launch   *launcher.Service
+	ctx      context.Context
 	library  *library.Service
 	profiles *profiles.Store
 	sources  map[string]library.Source
@@ -25,6 +28,10 @@ type App struct {
 
 func (a *App) GetProfiles() ([]profiles.Profile, error)            { return a.profiles.List() }
 func (a *App) CreateProfile(name string) (profiles.Profile, error) { return a.profiles.Create(name) }
+func (a *App) CreateProfileWithAvatar(name, avatar string) (profiles.Profile, error) {
+	return a.profiles.CreateWithAvatar(name, avatar)
+}
+func (a *App) GetSteamAccounts() ([]steam.Account, error) { return steam.AvailableAccounts() }
 func (a *App) SelectProfile(id string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

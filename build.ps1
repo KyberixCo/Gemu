@@ -1,4 +1,4 @@
-﻿param([switch]$Dev)
+param([switch]$Dev, [switch]$ExperimentalOverlay)
 $ErrorActionPreference = 'Stop'
 
 # Process environment (including CI secrets) overrides the root .env file.
@@ -52,8 +52,17 @@ try {
     $pushedLocation = $true
     $ownsConfiguration = $true
     [IO.File]::WriteAllText($configurationPath, $configuration, [Text.UTF8Encoding]::new($false))
+    if ($ExperimentalOverlay) {
+        & (Join-Path $PSScriptRoot 'scripts/build-overlay.ps1') -DownloadDependencies
+    }
     if ($Dev) { & wails dev @args } else { & wails build @args }
     $buildExitCode = $LASTEXITCODE
+    if ($ExperimentalOverlay -and -not $Dev -and $buildExitCode -eq 0) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'artifacts/overlay/gemu-overlay.dll') -Destination (Join-Path $PSScriptRoot 'build/bin/gemu-overlay.dll') -Force
+        $nativeLicenses = Join-Path $PSScriptRoot 'build/bin/overlay-licenses'
+        New-Item -ItemType Directory -Path $nativeLicenses -Force | Out-Null
+        Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'artifacts/overlay/licenses') -File | Copy-Item -Destination $nativeLicenses -Force
+    }
 }
 finally {
     try {

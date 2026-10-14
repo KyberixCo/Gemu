@@ -23,7 +23,7 @@ type blockingProfileSource struct {
 	release chan struct{}
 }
 
-func (s blockingProfileSource) Metadata(context.Context, domain.Game) (library.Metadata, error) {
+func (s blockingProfileSource) Metadata(context.Context, domain.Game, string) (library.Metadata, error) {
 	close(s.started)
 	<-s.release
 	return library.Metadata{Status: "ready"}, nil
@@ -79,7 +79,7 @@ func TestSwitchWhileImportIsInFlight(t *testing.T) {
 		t.Fatal(snapshot, err)
 	}
 }
-func (profileSource) Metadata(context.Context, domain.Game) (library.Metadata, error) {
+func (profileSource) Metadata(context.Context, domain.Game, string) (library.Metadata, error) {
 	return library.Metadata{Status: "ready"}, nil
 }
 func (profileSource) Player(_ context.Context, _ domain.Game, p library.Profile, _ string) library.PlayerState {

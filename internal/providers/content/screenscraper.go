@@ -132,16 +132,18 @@ type localizedText struct {
 	Text     string `json:"text"`
 }
 
-func localized(values []localizedText) string {
-	for _, language := range []string{"es", "en", "fr"} {
+func localized(values []localizedText, preferred string) string {
+	for _, language := range []string{languageCode(preferred), "en", "es", "fr"} {
 		for _, value := range values {
 			if value.Language == language && value.Text != "" {
 				return value.Text
 			}
 		}
 	}
-	if len(values) > 0 {
-		return values[0].Text
+	for _, value := range values {
+		if value.Text != "" {
+			return value.Text
+		}
 	}
 	return ""
 }
@@ -162,6 +164,10 @@ type screenGame struct {
 }
 
 func (p *ScreenScraper) Fetch(ctx context.Context, game domain.Game, credentials map[string]string) (library.ContentResult, error) {
+	return p.FetchLocalized(ctx, game, credentials, "es")
+}
+
+func (p *ScreenScraper) FetchLocalized(ctx context.Context, game domain.Game, credentials map[string]string, language string) (library.ContentResult, error) {
 	result := library.ContentResult{}
 	query, err := p.query(credentials)
 	if err != nil {
@@ -204,9 +210,9 @@ func (p *ScreenScraper) Fetch(ctx context.Context, game domain.Game, credentials
 	if match == nil {
 		return result, fmt.Errorf("sin coincidencia exacta para PC Windows")
 	}
-	result.Description = localized(match.Synopsis)
+	result.Description = localized(match.Synopsis, language)
 	for _, genre := range match.Genres {
-		if name := localized(genre.Names); name != "" {
+		if name := localized(genre.Names, language); name != "" {
 			result.Genres = append(result.Genres, name)
 		}
 	}

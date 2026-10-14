@@ -8,7 +8,13 @@ Para un juego: **Gestión → Metadatos → juego → Arte → Buscar imágenes 
 
 Para completar la biblioteca: **Gestión → Metadatos → Completar arte faltante**. Selecciona juegos, pulsa **Buscar arte para N juegos**, revisa propuestas y guarda. El host consulta solo los tipos vacíos; un juego puede abrirse para comparar, mantener un tipo vacío o excluirse del lote. El límite visible es 200 juegos por operación; puedes continuar con otro lote. Cancelar detiene las consultas y permite revisar resultados parciales.
 
+En la revisión final del asistente de primera configuración también aparece **Completar arte faltante** cuando la biblioteca importada conserva tipos de imagen vacíos. La acción usa los proveedores ya activados y sus credenciales guardadas, permite revisar propuestas y solo publica lo que se confirme. No es necesario volver a importar Steam; si no hay proveedor activado, el asistente ofrece configurarlo primero.
+
 Después de guardar puedes **Deshacer último cambio**, también desde el listado de Metadatos después de reiniciar. Los proveedores deben estar activados; las credenciales se resuelven en Go. No hace falta volver a importar Steam.
+
+## Idioma y títulos
+
+Antes de crear el primer perfil, Gemu solicita el idioma de la aplicación (español o inglés). La preferencia se conserva localmente y también se puede cambiar en **Ajustes → Idioma de la aplicación**. El idioma se envía al importar Steam para solicitar el nombre, la descripción y los géneros de Steam Store, y a SteamGridDB para descartar arte cuyo idioma esté etiquetado como incompatible; recursos sin etiqueta se conservan. El título localizado de Steam reemplaza al del manifiesto local (que puede estar en otro idioma); si la consulta no devuelve nombre, se conserva un título localizado previamente y, si no existe, el título detectado.
 
 ## Importación de Steam
 

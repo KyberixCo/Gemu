@@ -1,5 +1,5 @@
 export type GameArtwork = {id:string;type:'procedural';variant:0|1|2}|{id:string;type:'image';src:string;position?:string};
-export type GameMetadata = { releaseYear?:number; platform?:string; emulated?:boolean; tags?:string[];installed?:boolean;cover?:string;logo?:string;icon?:string;player?:import('./library').PlayerState };
+export type GameMetadata = { releaseYear?:number; platform?:string; emulated?:boolean; tags?:string[];installed?:boolean;cover?:string;logo?:string;logoManuallySelected?:boolean;icon?:string;player?:import('./library').PlayerState };
 export type Game = { id: string; title: string; subtitle: string; genre: string; provider: string; color: string; symbol: string; description: string;artworks?:GameArtwork[] } & GameMetadata;
 const defaultArtwork:GameArtwork={id:'primary',type:'procedural',variant:0};
 export function artworksForGame(game:Game):GameArtwork[]{return game.artworks?.length?game.artworks:[defaultArtwork];}

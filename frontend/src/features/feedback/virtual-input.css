@@ -1,0 +1,19 @@
+.virtual-input-toggle{position:fixed;right:20px;bottom:76px;z-index:210;display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--surface);color:var(--muted);font-size:12px;border-left:2px solid var(--acid);max-width:calc(100vw - 40px);flex-wrap:wrap}
+.virtual-pointer-target{outline:2px solid var(--acid)!important;outline-offset:2px;box-shadow:var(--focus-glow)!important}
+.virtual-input-toggle[aria-pressed=true]{color:var(--acid)}
+.virtual-cursor{position:fixed;top:0;left:0;z-index:230;pointer-events:none;color:var(--acid);filter:drop-shadow(0 2px 2px #000);transform:translate(50vw,50vh)}
+.virtual-cursor svg{fill:#101820}
+.virtual-keyboard{position:fixed;z-index:220;bottom:12px;left:50%;transform:translateX(-50%);width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 24px);overflow:auto;background:#101820fa;border-top:2px solid var(--acid);box-shadow:0 -12px 50px #0008;padding:clamp(10px,1.5vh,18px);display:flex;flex-direction:column;gap:10px}
+.virtual-keyboard-heading{display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--muted)}
+.virtual-keyboard-heading>span{display:flex;align-items:center;gap:10px}.virtual-keyboard-heading>span svg{color:var(--acid)}
+.virtual-keyboard-heading>button{padding:6px;display:flex}
+.virtual-keyboard-preview{font-size:clamp(16px,1.6vw,22px);min-height:35px;max-height:70px;overflow:auto;overflow-wrap:anywhere;border-bottom:1px solid var(--line);padding:4px 6px 10px;white-space:pre-wrap}
+.virtual-keyboard-rows{display:flex;flex-direction:column;gap:5px}
+.virtual-keyboard-row{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
+.virtual-keyboard-row>button{min-height:clamp(32px,5.3vh,56px);padding:5px 2px;font-size:clamp(16px,1.7vw,24px);background:#ffffff07}
+.virtual-keyboard-row>button:is(.selected,:focus-visible){background:var(--acid);color:#131907;box-shadow:none}
+.virtual-keyboard-actions{grid-template-columns:1.4fr 1fr 2.8fr 1.3fr 1.3fr}.virtual-keyboard-actions>button{font-size:clamp(11px,1.2vw,16px)}
+.virtual-keyboard-row>.virtual-keyboard-done{box-shadow:inset 0 -2px var(--acid)}
+.virtual-keyboard-help{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--muted);flex-wrap:wrap}.virtual-keyboard-help>span:last-child{margin-left:10px}.virtual-keyboard-help .pad-key{width:18px;height:18px;font-size:10px}
+@media(max-height:520px){.virtual-keyboard{gap:5px;bottom:4px}.virtual-keyboard-preview{max-height:38px;min-height:28px;padding-bottom:5px}.virtual-keyboard-row>button{min-height:28px}.virtual-keyboard-heading{font-size:12px}}
+@media(max-width:480px){.virtual-keyboard{width:calc(100vw - 12px);padding:8px}.virtual-keyboard-row{gap:3px}.virtual-keyboard-help{font-size:10px}.virtual-input-toggle{right:8px;bottom:8px;max-width:calc(100vw - 16px)}}

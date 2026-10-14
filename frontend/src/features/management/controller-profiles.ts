@@ -20,6 +20,6 @@ export function validProfiles(value:unknown):value is ControllerProfiles {
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
  return Object.entries(value).every(([key,p])=>{
   const profile=p as ControllerProfile;
-  return /^(Global|RetroArch|Dolphin|PCSX2|PPSSPP):(xbox|switch|ps4|ps5)$/.test(key)&&profile&&Number.isFinite(profile.deadzone)&&profile.deadzone>=0&&profile.deadzone<=50&&Number.isFinite(profile.sensitivity)&&profile.sensitivity>=50&&profile.sensitivity<=150&&typeof profile.invertY==='boolean'&&controls.every(c=>actions.includes(profile.bindings?.[c.id]));
+  return /^(Global|RetroArch|Dolphin|PCSX2|PPSSPP):(xbox|switch|ps4|ps5)(:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(key)&&profile&&Number.isFinite(profile.deadzone)&&profile.deadzone>=0&&profile.deadzone<=50&&Number.isFinite(profile.sensitivity)&&profile.sensitivity>=50&&profile.sensitivity<=150&&typeof profile.invertY==='boolean'&&controls.every(c=>actions.includes(profile.bindings?.[c.id]));
  });
 }

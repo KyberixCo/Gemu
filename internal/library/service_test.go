@@ -23,11 +23,11 @@ func (f *fakeSource) ArtworkHosts() []string { return []string{} }
 func (f *fakeSource) Discover(context.Context, string) (Preview, error) {
 	return Preview{Root: "library", Games: []domain.Game{{ID: f.id + ":42", Title: "Example", Installations: []domain.Installation{{Provider: f.id, Installed: true}}}}, Profiles: []Profile{{ID: "player", Name: "Local", Origin: "local"}}, Diagnostics: []string{}}, nil
 }
-func (f *fakeSource) Metadata(context.Context, domain.Game) (Metadata, error) {
+func (f *fakeSource) Metadata(context.Context, domain.Game, string) (Metadata, error) {
 	if f.fail {
 		return Metadata{}, fmt.Errorf("offline")
 	}
-	return Metadata{Description: "Fetched", Genres: []string{"Adventure"}, Status: "ready", Origin: f.id}, nil
+	return Metadata{Title: "Localized Example", Description: "Fetched", Genres: []string{"Adventure"}, Status: "ready", Origin: f.id}, nil
 }
 func (f *fakeSource) Player(_ context.Context, _ domain.Game, p Profile, key string) PlayerState {
 	return PlayerState{Profile: p, Status: "pending", Message: "No credentials"}
@@ -41,6 +41,9 @@ func TestGenericImportPublicationAndReimport(t *testing.T) {
 			t.Fatal(err)
 		}
 		if id == "one" {
+			if draft.Games[0].Game.Title != "Localized Example" {
+				t.Fatalf("localized title=%q", draft.Games[0].Game.Title)
+			}
 			snapshot, _ := service.Load()
 			if len(snapshot.Games) > 2 {
 				t.Fatal("prepared games published prematurely")
@@ -104,6 +107,7 @@ func TestOfflineReimportRetainsOnlyMatchingProfileProgress(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "library.json"), data, 0600); err != nil {
 		t.Fatal(err)
 	}
+
 	service := New(dir, map[string]Source{"one": &fakeSource{id: "one", fail: true}})
 	draft, err := service.Prepare(context.Background(), Request{SourceID: "one", ProfileID: "player"})
 	if err != nil {
@@ -120,6 +124,31 @@ func TestOfflineReimportRetainsOnlyMatchingProfileProgress(t *testing.T) {
 		t.Fatal("progress leaked to a different profile")
 	}
 }
+
+func TestOfflineReimportKeepsPreviouslyLocalizedSteamTitle(t *testing.T) {
+	dir := t.TempDir()
+	snapshot := Snapshot{
+		Version: 1,
+		Sources: []SourceConfig{},
+		Games: []Entry{{
+			Game:     domain.Game{ID: "one:42", Title: "Localized Store Title", Installations: []domain.Installation{{Installed: true}}},
+			SourceID: "one",
+			Metadata: Metadata{Origin: "steam-store", Status: "ready"},
+		}},
+	}
+	if err := New(dir, nil).writeSnapshot(snapshot); err != nil {
+		t.Fatal(err)
+	}
+	service := New(dir, map[string]Source{"one": &fakeSource{id: "one", fail: true}})
+	draft, err := service.Prepare(context.Background(), Request{SourceID: "one"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := draft.Games[0].Game.Title; got != "Localized Store Title" {
+		t.Fatalf("title=%q, want stored localized title", got)
+	}
+}
+
 func TestCachedArtBypassesFrontendFallback(t *testing.T) {
 	dir := t.TempDir()
 	service := New(dir, nil)

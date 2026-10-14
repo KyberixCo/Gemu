@@ -5,6 +5,7 @@ frontend/dist/
 *.tsbuildinfo
 __pycache__/
 artifacts/audio/
+artifacts/overlay/
 build/bin/
 frontend/wailsjs/
 artifacts/library/

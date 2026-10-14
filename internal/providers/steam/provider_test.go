@@ -2,12 +2,16 @@ package steam
 
 import (
 	"context"
+	"encoding/base64"
+	"image"
+	"image/png"
 	"kyberix.com/gemu/internal/domain"
 	"kyberix.com/gemu/internal/library"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -23,12 +27,39 @@ func TestLocalProfileDoesNotReadAccountSecrets(t *testing.T) {
 		t.Fatalf("profiles=%+v err=%v", profiles, err)
 	}
 }
+func TestLocalAccountsIncludeCachedAvatarWithoutSecrets(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "config", "avatarcache"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	data := `"users" { "76561198000000001" { "PersonaName" "Player" "AccountName" "private-login" "RememberPassword" "1" } }`
+	if err := os.WriteFile(filepath.Join(root, "config", "loginusers.vdf"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var avatar strings.Builder
+	if err := png.Encode(&avatar, image.NewRGBA(image.Rect(0, 0, 1, 1))); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "config", "avatarcache", "76561198000000001.jpg"), []byte(avatar.String()), 0600); err != nil {
+		t.Fatal(err)
+	}
+	accounts, err := LocalAccounts(root)
+	if err != nil || len(accounts) != 1 || accounts[0].Name != "Player" {
+		t.Fatalf("accounts=%+v err=%v", accounts, err)
+	}
+	if !strings.HasPrefix(accounts[0].Avatar, "data:image/png;base64,") ||
+		!strings.Contains(accounts[0].Avatar, base64.StdEncoding.EncodeToString([]byte(avatar.String()))) ||
+		strings.Contains(accounts[0].Name, "private-login") {
+		t.Fatalf("unexpected account data: %+v", accounts[0])
+	}
+}
 func TestAPIFirstAndLocalFallback(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("key") == "bad" {
 			w.WriteHeader(403)
 			return
 		}
+
 		switch r.URL.Path {
 		case "/ISteamUser/GetPlayerSummaries/v2/":
 			w.Write([]byte(`{"response":{"players":[{"steamid":"76561198000000001","personaname":"Remote"}]}}`))
@@ -55,5 +86,40 @@ func TestAPIFirstAndLocalFallback(t *testing.T) {
 		if result.Profile.Name != "Local" || result.Status == "ready" || len(result.Achievements) != 0 {
 			t.Fatalf("fallback=%+v", result)
 		}
+	}
+}
+
+func TestMetadataUsesSelectedLanguageAndLocalizedStoreTitle(t *testing.T) {
+	for _, test := range []struct {
+		language string
+		expected string
+		title    string
+	}{
+		{language: "en", expected: "english", title: "Mouse: P.I. For Hire"},
+		{language: "es", expected: "spanish", title: "Mouse: P.I. For Hire"},
+	} {
+		t.Run(test.language, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("l") != test.expected {
+					t.Errorf("language=%q, want %q", r.URL.Query().Get("l"), test.expected)
+				}
+				if r.URL.Query().Get("appids") != "42" {
+					t.Errorf("appids=%q", r.URL.Query().Get("appids"))
+				}
+				_, _ = w.Write([]byte(`{"42":{"success":true,"data":{"name":"Mouse: P.I. For Hire","short_description":"A game","header_image":"https://example.com/cover.jpg"}}}`))
+			}))
+			defer server.Close()
+
+			provider := NewProvider()
+			provider.Client = server.Client()
+			provider.storeURL = server.URL
+			metadata, err := provider.Metadata(context.Background(), domain.Game{ID: "steam:42", Title: "عنوان عربي"}, test.language)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if metadata.Title != test.title {
+				t.Fatalf("title=%q, want %q", metadata.Title, test.title)
+			}
+		})
 	}
 }

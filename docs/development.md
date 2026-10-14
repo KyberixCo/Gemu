@@ -37,6 +37,8 @@ Abre la URL que imprime Vite. `npm run build` comprueba TypeScript y genera el b
 
 La interfaz funciona offline después de cargar los recursos locales. Incluye seis juegos ficticios con escenarios vectoriales propios, búsqueda, filtros, favoritos guardados en el navegador, detalles y pantalla completa. La pantalla de consola tiene un escenario a todo el fondo, una banda horizontal de juegos, barra lateral de sistema y paneles laterales de detalles y ajustes. El foco inicial cae sobre un juego; al moverte cambia el escenario y el título. Los juegos de demostración no se pueden ejecutar. Flechas/Enter/Escape y mandos compatibles con la Gamepad API permiten navegar. Un mando requiere interacción inicial con el navegador; esta API no sustituye XInput nativo.
 
+La interfaz incluye español e inglés. El idioma se inicializa desde `navigator.languages` (español por defecto), se puede cambiar desde Ajustes y se guarda en `gemu.language.v1`. Al importar una biblioteca Steam, la opción seleccionada se envía al host para que Steam Store devuelva los metadatos y el título en el idioma correspondiente. Las cadenas de interfaz se centralizan en `frontend/src/localization.tsx`; los títulos de juegos y nombres de perfil son datos y conservan su texto original, con dirección automática para títulos.
+
 ## Bienvenida, movimiento y sonido
 
 Al abrir, pulsa **Enter / A / Entrar** para iniciar la bienvenida animada y su motivo sonoro. **Escape / B / Omitir** entra directamente a la biblioteca y descarta el audio pendiente. Una segunda confirmación durante la animación también la omite. La nueva firma sonora dura 3,92 segundos y su reverberación termina sobre la biblioteca cuando la entrada es normal; omitir corta el sonido. En navegador, el sonido necesita una interacción que habilite Web Audio; si un mando no logra habilitarlo, usa el botón Entrar o Probar sonido con ratón/teclado.
@@ -56,6 +58,16 @@ Al mantener una selección 600 ms, se solicita un cambio musical que entra en la
 En ajustes puedes cambiar **Ambiente de fondo**, **Volumen ambiente** e **Iluminación dinámica** por separado. El ambiente baja bajo confirmaciones y pausa al perder foco; recupera posición y armonía mediante fundido al volver. Movimiento reducido congela la luz y conserva el sonido. La síntesis es local y no descarga pistas ni envía los textos a terceros. Más detalles en [Composición procedural](procedural-music.md).
 
 Nueve WAV estéreo originales con reverberación y eco (aprox. 1,93 MB en total) se distribuyen localmente; fuente y procedencia en [el generador](../scripts/generate-ui-audio.py) y [el manifiesto](../frontend/public/audio/ui/README.md). Regenera con `python3 scripts/generate-ui-audio.py`. Pendiente escuchar/calibrar en TV y auriculares y revisar visualmente en un navegador: este entorno no permite abrir el puerto de Vite.
+
+## Internacionalización
+
+Gemu admite español e inglés. La preferencia se guarda en `gemu.language.v1`; si no existe, se usa el primer idioma compatible de la lista del navegador y, como respaldo, español. Se puede cambiar desde Ajustes, también con izquierda/derecha del mando. El cambio actualiza la interfaz, las etiquetas accesibles, los mensajes guardados y los textos generados de la biblioteca.
+
+Los textos de interfaz y las variables se resuelven en `frontend/src/localization.tsx`. Los errores y diagnósticos canónicos del host se traducen al mostrarlos mediante `frontend/src/host-messages.ts`, conservando nombres, rutas y detalles técnicos desconocidos. Las pruebas de cobertura detectan errores nuevos del host sin traducción.
+
+La importación envía el idioma elegido a Steam (metadatos, logros y su esquema), ScreenScraper (descripciones y géneros) y SteamGridDB (selección de arte compatible). Los metadatos ya importados y los textos escritos por el usuario se conservan; para pedir otros textos al proveedor hay que actualizar la biblioteca en el nuevo idioma. Los proveedores pueden devolver su idioma de respaldo si no ofrecen el solicitado.
+
+`npm.cmd test` verifica traducciones, diagnósticos, renderizado en ambos idiomas y conservación de datos. `npm.cmd run build` comprueba TypeScript y genera los recursos que deben existir antes de `go test ./...`.
 
 ## Núcleo Go
 

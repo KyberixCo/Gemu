@@ -101,7 +101,7 @@ func (s *Service) Prepare(ctx context.Context, req Request) (Draft, error) {
 		if err := ctx.Err(); err != nil {
 			return Draft{}, err
 		}
-		metadata, err := provider.Metadata(ctx, game)
+		metadata, err := provider.Metadata(ctx, game, req.Language)
 		old := byID[game.ID]
 		if err != nil {
 			metadata = Metadata{Origin: "local", Status: "pending", Genres: []string{}}
@@ -110,6 +110,12 @@ func (s *Service) Prepare(ctx context.Context, req Request) (Draft, error) {
 				metadata.Status = "cached"
 			}
 			draft.Diagnostics = append(draft.Diagnostics, game.Title+": metadatos no disponibles")
+		}
+		if metadata.Title != "" {
+			game.Title = metadata.Title
+			metadata.Title = ""
+		} else if old.Metadata.Origin == "steam-store" && old.Game.Title != "" {
+			game.Title = old.Game.Title
 		}
 		for _, art := range []*string{&metadata.Cover, &metadata.Background} {
 			if *art == "" || strings.HasPrefix(*art, "/library-assets/") {
@@ -124,7 +130,12 @@ func (s *Service) Prepare(ctx context.Context, req Request) (Draft, error) {
 			}
 		}
 		s.enrichMetadata(ctx, game, &metadata, old.Metadata, content, unavailable, &draft.Diagnostics)
-		player := provider.Player(ctx, game, profile, req.APIKey)
+		var player PlayerState
+		if localized, ok := provider.(LocalizedPlayerSource); ok {
+			player = localized.PlayerLocalized(ctx, game, profile, req.APIKey, req.Language)
+		} else {
+			player = provider.Player(ctx, game, profile, req.APIKey)
+		}
 		if player.Status != "ready" && profile.ID != "" && old.Player.Profile.ID == profile.ID && (old.Player.Status == "ready" || old.Player.Status == "cached") {
 			message := player.Message
 			player = old.Player

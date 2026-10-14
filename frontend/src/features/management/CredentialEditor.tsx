@@ -1,8 +1,10 @@
+import {useLocalization} from '../../localization';
 import {useEffect,useRef,useState} from 'react';
 import {credentialHost,type CredentialProvider,type CredentialStorage} from '../../library';
 import {TVField} from './TVControls';
 
 export function CredentialEditor({provider,fields,values,onChange,onStoredChange}:{provider:CredentialProvider;fields:{name:string;label:string}[];values:Record<string,string>;onChange:(values:Record<string,string>)=>void;onStoredChange?:()=>void}){
+ const {t}=useLocalization();
  const [saved,setSaved]=useState<string[]>([]),[busy,setBusy]=useState(false),[status,setStatus]=useState('');
  const [storage,setStorage]=useState<CredentialStorage>({name:'Almacén seguro',available:false});
  const sequence=useRef(0);
@@ -28,8 +30,8 @@ export function CredentialEditor({provider,fields,values,onChange,onStoredChange
   catch(reason){if(sequence.current===id)setStatus(String(reason));}
   finally{if(sequence.current===id)setBusy(false);}
  };
- return <div className="credential-editor"><p className="manager-hint">{storage.available?`${storage.name} · separado por perfil. Los campos vacíos conservan lo guardado; los valores nuevos reemplazan solo ese campo al guardar.`:'No hay almacenamiento seguro disponible. Puedes usar valores temporales durante esta sesión.'}</p>
+ return <div className="credential-editor"><p className="manager-hint">{storage.available?t('{storage} · separado por perfil. Los campos vacíos conservan lo guardado; los valores nuevos reemplazan solo ese campo al guardar.',{storage:t(storage.name)}):t("No hay almacenamiento seguro disponible. Puedes usar valores temporales durante esta sesión.")}</p>
  {fields.map(field=><TVField key={field.name} label={field.label} secret stored={saved.includes(field.name)} disabled={busy} value={values[field.name]??''} onChange={value=>onChange({...values,[field.name]:value})}/>)}
- <div className="manager-actions"><button data-nav className="manager-secondary" disabled={busy||!storage.available||!Object.values(values).some(Boolean)} onClick={()=>void save()}>Guardar credenciales</button><button data-nav className="manager-secondary" disabled={busy||!storage.available||!saved.length} onClick={()=>void remove()}>Eliminar guardadas</button><button data-nav className="manager-secondary" disabled={busy||!Object.values(values).some(Boolean)} onClick={()=>onChange({})}>Descartar valores nuevos</button></div>
- <p role="status">{busy?'Procesando credenciales…':status||`${saved.length} campos guardados en este perfil.`}</p></div>;
+ <div className="manager-actions"><button data-nav className="manager-secondary" disabled={busy||!storage.available||!Object.values(values).some(Boolean)} onClick={()=>void save()}>{t("Guardar credenciales")}</button><button data-nav className="manager-secondary" disabled={busy||!storage.available||!saved.length} onClick={()=>void remove()}>{t("Eliminar guardadas")}</button><button data-nav className="manager-secondary" disabled={busy||!Object.values(values).some(Boolean)} onClick={()=>onChange({})}>{t("Descartar valores nuevos")}</button></div>
+ <p role="status">{busy?t("Procesando credenciales…"):t(status)||t('{count} campos guardados en este perfil.',{count:saved.length})}</p></div>;
 }

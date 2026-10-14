@@ -12,6 +12,14 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.clearAllTimers();vi.useRealTimers();vi.unstubAllGlobals();});
 describe('audio lifecycle',()=>{
+ it('suspends the audio device during gameplay and resumes the same context',async()=>{
+  const audio=new InterfaceAudio();await audio.unlock();const context=FakeContext.instances[0];
+  const suspend=vi.fn(async()=>{context.state='suspended';});Object.assign(context,{suspend});
+  audio.setActive(false);await vi.waitFor(()=>expect(suspend).toHaveBeenCalledTimes(1));
+  expect(await audio.unlock()).toBe(false);expect(context.state).toBe('suspended');
+  audio.setActive(true);await vi.waitFor(()=>expect(context.state).toBe('running'));
+  expect(FakeContext.instances).toHaveLength(1);expect(audio.play('confirm')).toBe(true);
+ });
  it('loads and decodes once, sharing one context',async()=>{
   const audio=new InterfaceAudio();await Promise.all([audio.unlock(),audio.unlock()]);await audio.unlock();
   expect(FakeContext.instances).toHaveLength(1);expect(fetch).toHaveBeenCalledTimes(9);expect(FakeContext.instances[0].decodeAudioData).toHaveBeenCalledTimes(9);

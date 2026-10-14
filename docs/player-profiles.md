@@ -4,12 +4,14 @@ Gemu distingue el perfil local de jugador de la cuenta de una fuente como Steam.
 
 ## Arranque
 
-- Sin perfiles: asistente de dos pasos, nombre y revisión. Crear el perfil lo guarda antes de entrar a la consola.
+- Sin perfiles: asistente de dos pasos que lista las cuentas Steam locales, si se pueden detectar. Elegir una sugiere su nombre y avatar en caché; el nombre se puede editar y también se puede crear un perfil manualmente. Crear el perfil lo guarda antes de entrar a la consola.
 - Un perfil: selección automática y animación del logo, sin pulsar Entrar.
 - Varios perfiles: selector de jugador antes de la animación.
 - Gestión → Jugadores y el botón del perfil en la cabecera permiten crear otro perfil o cambiar de jugador. Al cambiar se desmonta la sesión anterior, se descartan sus asistentes y se carga el espacio del jugador elegido.
 
 Importar Steam desde el perfil activo permite elegir una cuenta de Steam. Esa asociación y sus logros se guardan exclusivamente en la biblioteca de ese perfil. Una importación pendiente de otra sesión no puede publicarse después del cambio de jugador. Gemu no cambia la cuenta iniciada en el cliente Steam.
+
+El asistente solo lee los nombres de `loginusers.vdf` y avatares locales en caché; nunca lee el nombre de inicio de sesión ni la contraseña y no consulta servicios externos. Cuando hay una imagen en caché, se conserva en el perfil de Gemu; si no la hay, el perfil usa sus iniciales.
 
 ## Persistencia
 

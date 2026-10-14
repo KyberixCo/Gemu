@@ -28,6 +28,26 @@ func (f *fakeContent) Fetch(context.Context, domain.Game, map[string]string) (Co
 	return f.result, f.err
 }
 
+type languageAwareContent struct {
+	fakeContent
+	language string
+}
+
+func (f *languageAwareContent) FetchLocalized(_ context.Context, _ domain.Game, _ map[string]string, language string) (ContentResult, error) {
+	f.language = language
+	return f.result, f.err
+}
+
+func TestMetadataEnrichmentForwardsApplicationLanguage(t *testing.T) {
+	s := New(t.TempDir(), nil)
+	provider := &languageAwareContent{}
+	s.WithContentProviders(map[string]ContentProvider{"test": provider})
+	s.enrichMetadata(context.Background(), domain.Game{Title: "One"}, &Metadata{}, Metadata{}, []ContentRequest{{ID: "test", Language: "es"}}, map[string]bool{}, &[]string{})
+	if provider.language != "es" {
+		t.Fatalf("provider language = %q, want es", provider.language)
+	}
+}
+
 func cachedTestArt(t *testing.T, service *Service, address string, width, height int) string {
 	t.Helper()
 	if err := os.MkdirAll(service.artDir, 0700); err != nil {

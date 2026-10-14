@@ -5,7 +5,8 @@ import type {Game} from './catalog';
 export function GameTitle({game,level=1,className=''}:{game:Game;level?:1|2;className?:string}) {
  const [failed,setFailed]=useState<string>();
  const Heading=level===1?'h1':'h2';
- return <Heading className={className}>{game.logo&&failed!==game.logo?
+ const logoHasWrongLanguage=!game.logoManuallySelected&&/^mouse:\s*p\.i\.\s*for\s*hire(?:\b|$)/i.test(game.title.trim());
+ return <Heading dir="auto" className={className}>{game.logo&&failed!==game.logo&&!logoHasWrongLanguage?
   <img className="game-logo" src={game.logo} alt={game.title} onError={()=>setFailed(game.logo)}/>:
   game.title.split(' ').map((word,index)=><span key={index}>{word} </span>)}</Heading>;
 }

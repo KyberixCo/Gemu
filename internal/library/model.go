@@ -24,6 +24,7 @@ type PlayerState struct {
 	Message      string        `json:"message"`
 }
 type Metadata struct {
+	Title       string    `json:"-"`
 	Description string    `json:"description"`
 	Genres      []string  `json:"genres"`
 	Cover       string    `json:"cover"`
@@ -51,6 +52,7 @@ type Artwork struct {
 type ContentRequest struct {
 	ID          string            `json:"id"`
 	Priority    int               `json:"priority"`
+	Language    string            `json:"language,omitempty"`
 	Credentials map[string]string `json:"credentials"`
 }
 type ContentResult struct {
@@ -64,6 +66,9 @@ type ContentProvider interface {
 	ArtworkHosts() []string
 	Check(context.Context, map[string]string) error
 	Fetch(context.Context, domain.Game, map[string]string) (ContentResult, error)
+}
+type LocalizedContentProvider interface {
+	FetchLocalized(context.Context, domain.Game, map[string]string, string) (ContentResult, error)
 }
 type Entry struct {
 	Game     domain.Game `json:"game"`
@@ -93,6 +98,7 @@ type Request struct {
 	SourceID         string           `json:"sourceId"`
 	Root             string           `json:"root"`
 	ProfileID        string           `json:"profileId"`
+	Language         string           `json:"language"`
 	APIKey           string           `json:"apiKey"`
 	ContentProviders []ContentRequest `json:"contentProviders,omitempty"`
 }
@@ -108,6 +114,11 @@ type Source interface {
 	Name() string
 	ArtworkHosts() []string
 	Discover(context.Context, string) (Preview, error)
-	Metadata(context.Context, domain.Game) (Metadata, error)
+	Metadata(context.Context, domain.Game, string) (Metadata, error)
 	Player(context.Context, domain.Game, Profile, string) PlayerState
+}
+
+// LocalizedPlayerSource is optional so existing source adapters remain compatible.
+type LocalizedPlayerSource interface {
+	PlayerLocalized(context.Context, domain.Game, Profile, string, string) PlayerState
 }

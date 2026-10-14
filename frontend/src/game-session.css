@@ -1,0 +1,61 @@
+.session-backdrop{position:fixed;inset:0;z-index:200;background:#080c12;color:#f2efe6}
+.session-menu{position:relative;isolation:isolate;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;--session-gutter:clamp(28px,5vw,96px)}
+.session-art{position:absolute;inset:0 0 0 28%;z-index:-2;pointer-events:none}
+.session-art .scene{width:100%;height:100%;object-fit:cover;opacity:.65}
+.session-menu:before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#080c12 0%,#080c12f5 32%,#080c1280 65%,#080c1230),linear-gradient(0deg,#080c12 0%,transparent 48%,#080c1299 100%);pointer-events:none}
+.session-header{display:flex;align-items:center;gap:24px;padding:24px var(--session-gutter);border-bottom:1px solid #ffffff12}
+.session-brand{font:36px Brolink,Arial,sans-serif;line-height:1;letter-spacing:-3px}.session-brand>span{color:var(--acid)}
+.session-section,.session-status,.session-eyebrow{font:11px monospace;letter-spacing:1.6px;text-transform:uppercase}
+.session-section{color:var(--muted)}
+.session-status{display:flex;align-items:center;gap:10px;margin-left:auto;color:var(--acid);letter-spacing:1px}
+.session-status>span{width:6px;height:6px;background:currentColor;box-shadow:0 0 12px #d9ff3f40}
+.session-status[data-state=requested],.session-status[data-state=closing]{color:#d4c3a0}
+.session-content{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(0,1.15fr);gap:clamp(40px,7vw,140px);align-items:center;overflow:auto;padding:clamp(24px,5vh,64px) var(--session-gutter)}
+.session-controls{min-width:0;max-width:580px}
+.session-eyebrow{display:flex;align-items:center;gap:10px;color:var(--acid);margin:0 0 18px;line-height:1.5;flex-wrap:wrap}
+.session-menu-heading{font-size:clamp(28px,3vw,48px);font-weight:500;letter-spacing:-1.5px;line-height:1.1;margin:0 0 32px}
+.session-actions{display:flex;flex-direction:column;gap:8px}
+.session-action{width:100%;display:flex;align-items:center;gap:20px;min-height:90px;padding:20px 24px;text-align:left;font:inherit;color:#f2efe6;background:none;border:0;border-radius:0;cursor:pointer;transition:background 140ms,color 140ms,box-shadow 140ms;outline:0}
+.session-action>svg{width:24px;height:24px;flex-shrink:0;color:#bac4bf;stroke-width:1.6}
+.session-action>span{display:flex;flex-direction:column;gap:7px;min-width:0}
+.session-action strong{font-size:clamp(18px,1.5vw,26px);font-weight:500;line-height:1.25}
+.session-action small{font-size:clamp(12px,1vw,16px);line-height:1.5;color:var(--muted)}
+.session-action .session-action-end{margin-left:auto;width:20px}
+.session-action:hover:not(:disabled){background:var(--surface-hover)}
+.session-action:focus-visible,.session-menu[data-input=gamepad] .session-action:focus{background:var(--surface-focus);box-shadow:inset 3px 0 var(--acid),var(--focus-glow)}
+.session-action.session-primary{background:var(--acid);color:#141b08}
+.session-primary>svg,.session-primary small{color:#344014}
+.session-primary:hover:not(:disabled){background:#e2ff6c}
+.session-primary:focus-visible,.session-menu[data-input=gamepad] .session-primary:focus{background:var(--acid);color:#141b08;box-shadow:inset 4px 0 #141b08,var(--focus-glow)}
+.session-action.session-exit{margin-top:20px;border-top:1px solid #ffffff16;padding-top:24px}
+.session-exit>svg{color:#b6aba3}
+.session-action.session-danger{color:#ffd0b6;background:#ffd0b608}
+.session-danger>svg,.session-danger small{color:#e7b69b}
+.session-danger:focus-visible,.session-menu[data-input=gamepad] .session-danger:focus{box-shadow:inset 3px 0 #ffd0b6,0 0 24px #ffd0b615;background:#ffd0b610}
+.session-action:disabled{opacity:.38;cursor:default}
+.session-warning{display:flex;align-items:flex-start;gap:14px;margin:0 0 28px;color:#ffd0b6;font-size:clamp(15px,1.2vw,20px);line-height:1.6}
+.session-warning svg{flex-shrink:0;margin-top:4px}
+.session-feedback{min-height:24px;margin-top:24px;font-size:clamp(12px,1vw,16px);line-height:1.6;color:var(--muted)}
+.session-feedback p{margin:0 0 8px}.session-feedback .session-error{color:#ffd0b6}
+.session-game{align-self:center;min-width:0;padding:8vh 0 0}
+.session-game .session-eyebrow{color:#d0d8ce;letter-spacing:1px}
+.session-game-title{margin:24px 0;font-size:clamp(36px,5vw,94px);font-weight:700;line-height:1.05;letter-spacing:-2.5px;overflow-wrap:anywhere;text-shadow:0 2px 28px #0006}
+.session-game-title .game-logo{display:block;max-width:100%;width:auto;max-height:clamp(100px,20vh,280px);object-fit:contain;object-position:left center}
+.session-game-note{max-width:420px;margin:24px 0 0;font-size:clamp(13px,1.1vw,18px);line-height:1.7;color:#bac4bf}
+.session-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px var(--session-gutter);border-top:1px solid #ffffff14;background:#080c1270;font-size:clamp(11px,.9vw,15px);color:#b8c3ba}
+.session-control-hints{display:flex;gap:24px;flex-wrap:wrap}.session-control-hints>span,.session-shortcut{display:flex;align-items:center;gap:9px}
+.session-footer kbd,.session-banner kbd{font:11px monospace;color:var(--acid);padding:4px 6px;background:#ffffff08;border:0;border-radius:0;white-space:nowrap}
+.session-footer .pad-key{width:22px;height:22px;color:var(--acid);font-size:11px}
+.session-shortcut{font:10px monospace;letter-spacing:.5px;flex-wrap:wrap;justify-content:flex-end}
+.session-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.session-banner{position:fixed;z-index:80;bottom:76px;left:clamp(90px,10vw,180px);display:flex;align-items:center;gap:18px;max-width:calc(100vw - 200px);padding:18px 24px;background:#101820f5;color:#f2efe6;border:0;border-radius:0;box-shadow:inset 3px 0 var(--acid);text-align:left;cursor:pointer;font:inherit}
+.session-banner>svg{color:var(--acid);flex-shrink:0}.session-banner>span:not(.session-banner-hint){display:flex;flex-direction:column;gap:6px;min-width:0}
+.session-banner small{font:10px monospace;color:var(--acid);letter-spacing:1px;text-transform:uppercase}.session-banner strong{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.session-banner .session-banner-hint{display:flex;align-items:center;gap:10px;margin-left:24px;color:var(--muted);font-size:12px;white-space:nowrap}
+.session-banner:hover{background:#17212bf5}.session-banner:focus-visible{outline:0;box-shadow:inset 3px 0 var(--acid),var(--focus-glow)}.session-banner:disabled{opacity:.5;cursor:default}
+@media(min-width:1900px){.session-header{padding-top:36px;padding-bottom:36px}.session-brand{font-size:48px}.session-section,.session-status,.session-eyebrow{font-size:15px}.session-action{min-height:116px;padding:28px 32px}.session-action>svg{width:30px;height:30px}.session-footer{padding-top:30px;padding-bottom:30px}.session-footer kbd{font-size:14px}}
+@media(max-height:720px){.session-header{padding-top:18px;padding-bottom:18px}.session-content{padding-top:20px;padding-bottom:20px}.session-menu-heading{margin-bottom:22px}.session-eyebrow{margin-bottom:12px}.session-action{min-height:74px;padding:16px 20px}.session-action.session-exit{margin-top:12px;padding-top:18px}.session-feedback{margin-top:16px}.session-footer{padding-top:16px;padding-bottom:16px}.session-game{padding-top:0}}
+@media(max-width:900px){.session-content{gap:32px;grid-template-columns:minmax(280px,1fr) minmax(0,1fr)}.session-action{gap:14px;padding-left:18px;padding-right:18px}.session-control-hints{gap:16px}.session-shortcut>span{display:none}.session-game-title{font-size:clamp(30px,5vw,50px);letter-spacing:-1.5px}}
+@media(max-width:650px){.session-menu{--session-gutter:24px}.session-header{gap:16px}.session-section{display:none}.session-content{display:flex;flex-direction:column;align-items:stretch;gap:24px}.session-game{order:-1;align-self:stretch}.session-game-title{font-size:32px;margin:14px 0}.session-game-title .game-logo{max-height:90px}.session-game .session-eyebrow,.session-game-note{display:none}.session-controls{max-width:none}.session-menu-heading{font-size:26px}.session-controls>.session-eyebrow{display:none}.session-art{left:0;opacity:.5}.session-menu:before{background:linear-gradient(0deg,#080c12 10%,#080c12d9 60%,#080c1266)}.session-footer{align-items:flex-start;gap:16px}.session-shortcut{display:none}.session-control-hints{gap:14px;font-size:10px}.session-banner{left:80px;right:20px;max-width:none;gap:12px;padding:14px 16px}.session-banner .session-banner-hint{margin-left:auto;font-size:0;gap:0}.session-banner-hint>svg{display:none}}
+@media(prefers-reduced-motion:reduce){.session-action{transition:none}}
+[data-motion=reduced] .session-action{transition:none}

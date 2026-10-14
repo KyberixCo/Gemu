@@ -15,6 +15,13 @@ var ErrContentUnavailable = errors.New("proveedor no disponible")
 
 func BackgroundSize(width, height int) bool { return width >= 1280 && height >= 720 && width > height }
 
+func (s *Service) fetchContent(ctx context.Context, provider ContentProvider, game domain.Game, request ContentRequest) (ContentResult, error) {
+	if localized, ok := provider.(LocalizedContentProvider); ok {
+		return localized.FetchLocalized(ctx, game, request.Credentials, request.Language)
+	}
+	return provider.Fetch(ctx, game, request.Credentials)
+}
+
 func (s *Service) enrichMetadata(ctx context.Context, game domain.Game, metadata *Metadata, old Metadata, requests []ContentRequest, unavailable map[string]bool, diagnostics *[]string) {
 	selectedCover, selectedBackground, selectedDescription, selectedGenres := false, false, false, false
 	// Fresh store metadata does not include third-party artwork. Retain cached art
@@ -28,7 +35,7 @@ func (s *Service) enrichMetadata(ctx context.Context, game domain.Game, metadata
 			continue
 		}
 		queried[request.ID] = true
-		result, err := provider.Fetch(ctx, game, request.Credentials)
+		result, err := s.fetchContent(ctx, provider, game, request)
 		if err != nil {
 			*diagnostics = append(*diagnostics, game.Title+": "+provider.Name()+" · "+err.Error())
 			if errors.Is(err, ErrContentUnavailable) {

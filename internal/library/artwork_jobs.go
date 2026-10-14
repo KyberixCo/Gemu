@@ -164,7 +164,7 @@ func (s *Service) searchArtwork(ctx context.Context, job *artworkJob, entries []
 				continue
 			}
 			provider := s.content[request.ID]
-			result, err := provider.Fetch(ctx, entry.Game, request.Credentials)
+			result, err := s.fetchContent(ctx, provider, entry.Game, request)
 			if ctx.Err() != nil {
 				break
 			}

@@ -1,4 +1,5 @@
 import {profileKey} from '../../profiles';
+import {isForeground,subscribeActivity} from '../../activity';
 import { useEffect, useState } from 'react';
 import { interfaceAudio } from './audio';
 import { isReducedMotion, parsePreferences, type FeedbackPreferences } from './preferences';
@@ -7,7 +8,7 @@ export function useFeedback(onError: (message:string) => void) {
  const [preferences,setPreferences] = useState<FeedbackPreferences>(() => {
   try { return parsePreferences(localStorage.getItem(profileKey(KEY))); } catch { return parsePreferences(null); }
  });
- const [active,setActive] = useState(() => !document.hidden && document.hasFocus());
+ const [active,setActive] = useState(isForeground);
  const [systemReduced,setSystemReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
  useEffect(() => {
   const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -17,13 +18,14 @@ export function useFeedback(onError: (message:string) => void) {
  useEffect(() => { interfaceAudio.configure(preferences); },[preferences]);
  useEffect(() => {
   void interfaceAudio.preload();
-  const sync = () => {const foreground=!document.hidden && document.hasFocus();setActive(foreground);interfaceAudio.setActive(foreground);};
+  const sync = () => {const foreground=isForeground();setActive(foreground);interfaceAudio.setActive(foreground);};
+  const unsubscribe=subscribeActivity(sync);
   const unlock = () => { void interfaceAudio.unlock(); };
   sync();
   window.addEventListener('focus',sync);window.addEventListener('blur',sync);document.addEventListener('visibilitychange',sync);
   window.addEventListener('pointerdown',unlock);window.addEventListener('keydown',unlock);
   return () => {
-   interfaceAudio.stop();window.removeEventListener('focus',sync);window.removeEventListener('blur',sync);document.removeEventListener('visibilitychange',sync);
+   unsubscribe();interfaceAudio.stop();window.removeEventListener('focus',sync);window.removeEventListener('blur',sync);document.removeEventListener('visibilitychange',sync);
    window.removeEventListener('pointerdown',unlock);window.removeEventListener('keydown',unlock);
   };
  },[]);

@@ -44,7 +44,7 @@ func TestSteamGridDBSteamIdentityAndSeparateArtworkRoles(t *testing.T) {
 			}
 			w.Write([]byte(`{"success":true,"data":[{"id":5,"url":"https://cdn2.steamgriddb.com/cover.png","width":600,"height":900,"mime":"image/png"},{"id":6,"url":"https://cdn2.steamgriddb.com/wide-grid.png","width":1920,"height":1080,"mime":"image/png"}]}`))
 		case "/logos/game/7":
-			w.Write([]byte(`{"success":true,"data":[{"id":7,"url":"https://cdn2.steamgriddb.com/logo.png","width":1000,"height":300,"mime":"image/png"}]}`))
+			w.Write([]byte(`{"success":true,"data":[{"id":6,"url":"https://cdn2.steamgriddb.com/logo-ar.png","width":1000,"height":300,"mime":"image/png","language":"ar"},{"id":7,"url":"https://cdn2.steamgriddb.com/logo.png","width":1000,"height":300,"mime":"image/png","language":"en"}]}`))
 		case "/icons/game/7":
 			w.Write([]byte(`{"success":true,"data":[{"id":8,"url":"https://cdn2.steamgriddb.com/icon.png","width":256,"height":256,"mime":"image/png"}]}`))
 		default:
@@ -54,7 +54,7 @@ func TestSteamGridDBSteamIdentityAndSeparateArtworkRoles(t *testing.T) {
 	defer server.Close()
 	provider := NewSteamGridDB()
 	provider.baseURL = server.URL
-	result, err := provider.Fetch(context.Background(), domain.Game{Title: "Example", Installations: []domain.Installation{{Provider: "Steam", ExternalID: "42"}}}, map[string]string{"apiKey": "test-key"})
+	result, err := provider.FetchLocalized(context.Background(), domain.Game{Title: "Example", Installations: []domain.Installation{{Provider: "Steam", ExternalID: "42"}}}, map[string]string{"apiKey": "test-key"}, "en")
 	if err != nil || len(result.Artworks) != 5 || len(result.Diagnostics) != 0 {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
@@ -66,6 +66,27 @@ func TestSteamGridDBSteamIdentityAndSeparateArtworkRoles(t *testing.T) {
 	}
 	if len(calls) != 5 || calls[0] != "/games/steam/42" {
 		t.Fatalf("requests=%v", calls)
+	}
+}
+
+func TestSteamGridDBLanguageMatchingKeepsUnlabelledAssetsAndFiltersKnownMismatches(t *testing.T) {
+	for _, test := range []struct {
+		asset, preferred string
+		want             bool
+	}{
+		{"Arabic", "en", false},
+		{"ar", "es", false},
+		{"English", "en", true},
+		{"en-US", "en", true},
+		{"Spanish (Spain)", "es", true},
+		{"es", "es", true},
+		{"", "en", true},
+		{"unrecognized", "en", true},
+		{"Arabic", "", true},
+	} {
+		if got := languageMatches(test.asset, test.preferred); got != test.want {
+			t.Errorf("languageMatches(%q, %q) = %v, want %v", test.asset, test.preferred, got, test.want)
+		}
 	}
 }
 

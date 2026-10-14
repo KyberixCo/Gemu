@@ -25,6 +25,7 @@ export class InterfaceAudio {
  private preferences: FeedbackPreferences = defaultPreferences;
  private active = true;
  private generation = 0;
+ private contextTransition:Promise<void>=Promise.resolve();
  preload() {
   return this.loading ??= Promise.all(soundNames.map(async name => {
    try { const response = await fetch(`/audio/ui/${name}.wav`); if (response.ok) this.files.set(name, await response.arrayBuffer()); } catch { /* Missing audio is a silent degradation. */ }
@@ -41,6 +42,7 @@ export class InterfaceAudio {
   this.syncAmbient();
  }
  async unlock(): Promise<boolean> {
+  if(!this.active)return false;
   try {
    if (!this.context) {
     this.context = new AudioContext();
@@ -57,6 +59,7 @@ export class InterfaceAudio {
     this.files.clear();
    });
    await Promise.all([resumed, this.decoding]);
+   if(!this.active){await this.context.suspend?.();return false;}
    this.unlocked=this.context.state==='running';
    this.syncAmbient();
    return this.context.state === 'running';
@@ -93,7 +96,14 @@ export class InterfaceAudio {
  cancelPending() { this.generation++; }
  private stopEffects() { this.cancelPending(); [...this.voices].forEach(v => this.remove(v)); this.policy.reset(); }
  stop() { this.stopEffects(); this.stopAmbient(); }
- setActive(active: boolean) { this.active = active; if (!active) this.stop(); else this.syncAmbient(); }
+ setActive(active: boolean) {
+  this.active = active; if (!active) this.stop(); else this.syncAmbient();
+  const context=this.context;if(!context)return;
+  this.contextTransition=this.contextTransition.catch(()=>{}).then(async()=>{
+   if(this.active){if(context.state==='suspended')await context.resume();this.syncAmbient();}
+   else if(context.state==='running')await context.suspend?.();
+  }).catch(()=>{/* Resume may require the next user gesture. */});
+ }
  setAmbientSession(enabled: boolean) { this.ambientSession = enabled; this.syncAmbient(); }
  selectGame(game:Pick<Game,'title'|'subtitle'|'genre'|'description'> & Pick<Game,'releaseYear'|'platform'|'emulated'|'tags'>) {
   const profile=profileForGame(game);

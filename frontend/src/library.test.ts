@@ -1,5 +1,19 @@
 import {expect,it,vi} from 'vitest';
 import {catalogFromLibrary,contentHost,credentialHost,loadLibrarySession,libraryHost,artworkHost,type Snapshot} from './library';
+it('localizes generated library text while preserving names and fetched metadata',()=>{
+ const snapshot:Snapshot={version:1,sources:[],games:[{sourceId:'steam',game:{ID:'steam:42',Title:'Biblioteca',Installations:[]},metadata:{description:'',genres:[],cover:'',background:'',origin:'steam',status:'pending'},player:{profile:{id:'player',name:'Perfil',origin:'local'},status:'pending',message:'',achievements:[]}}]};
+ const english=catalogFromLibrary(snapshot,'en')[0],spanish=catalogFromLibrary(snapshot,'es')[0];
+ expect(english.title).toBe('Biblioteca');
+ expect(english.subtitle).toBe('Profile · Perfil');
+ expect(english.genre).toBe('Uncategorized');
+ expect(english.description).toBe('Metadata not fetched yet.');
+ expect(spanish.genre).toBe('Sin clasificar');
+ snapshot.games[0].metadata.description='Descripción del proveedor';
+ snapshot.games[0].metadata.genres=['Aventura'];
+ expect(catalogFromLibrary(snapshot,'en')[0].description).toBe('Descripción del proveedor');
+ expect(catalogFromLibrary(snapshot,'en')[0].genre).toBe('Aventura');
+ expect(snapshot.games[0].game.Title).toBe('Biblioteca');
+});
 it('maps imported data without fabricating achievements or demo installations',()=>{
  const snapshot:Snapshot={version:1,sources:[],games:[{sourceId:'other',game:{ID:'other:42',Title:'Real game',Installations:[{Provider:'other',ExternalID:'42',Path:'C:/Game',Installed:true}]},metadata:{description:'Fetched',genres:['Adventure'],cover:'/library-assets/cover',background:'/library-assets/background',origin:'provider',status:'ready'},player:{profile:{id:'player',name:'Player',origin:'local'},status:'pending',message:'No key',achievements:[]}}]};
  const game=catalogFromLibrary(snapshot)[0];expect(game.installed).toBe(true);expect(game.provider).toBe('other');expect(game.player?.achievements).toEqual([]);expect(game.artworks).toEqual([{id:'background',type:'image',src:'/library-assets/background'}]);expect(game.cover).toBe('/library-assets/cover');
@@ -15,6 +29,10 @@ it('rotates only chosen backgrounds after an artwork edit and exposes the chosen
 it('maps selected grids, logos and icons to their distinct presentation roles',()=>{
  const snapshot:Snapshot={version:1,sources:[],games:[{sourceId:'steam',game:{ID:'one',Title:'One',Installations:[]},metadata:{description:'',genres:[],cover:'/grid',background:'/hero',logo:'/logo',icon:'/icon',origin:'steamgriddb',status:'ready',artworks:[{id:'logo',kind:'logo',url:'/logo',provider:'steamgriddb',width:800,height:300},{id:'icon',kind:'icon',url:'/icon',provider:'steamgriddb',width:256,height:256}]},player:{profile:{id:'',name:'',origin:'local'},status:'pending',message:'',achievements:[]}}]};
  const game=catalogFromLibrary(snapshot)[0];expect(game.cover).toBe('/grid');expect(game.logo).toBe('/logo');expect(game.icon).toBe('/icon');expect(game.artworks).toEqual([{id:'background',type:'image',src:'/hero'}]);
+});
+it('preserves the manual-logo selection state for title rendering',()=>{
+ const snapshot:Snapshot={version:1,sources:[],games:[{sourceId:'steam',game:{ID:'one',Title:'MOUSE: P.I. FOR HIRE',Installations:[]},metadata:{description:'',genres:[],cover:'',background:'',logo:'/chosen-logo',origin:'steamgriddb',status:'ready',manualArt:['logo']},player:{profile:{id:'',name:'',origin:'local'},status:'pending',message:'',achievements:[]}}]};
+ expect(catalogFromLibrary(snapshot)[0].logoManuallySelected).toBe(true);
 });
 it('requires all artwork job methods before opening the flow on an old host',()=>{
  vi.stubGlobal('window',{go:{main:{App:{StartArtworkSearch:vi.fn()}}}});
