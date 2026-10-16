@@ -3,6 +3,7 @@ package profiles
 import (
 	"bytes"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"kyberix.com/gemu/internal/storage"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +36,67 @@ func (s *Store) List() ([]Profile, error) {
 	return s.list()
 }
 func (s *Store) list() ([]Profile, error) {
+	db, err := s.database()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	return listProfiles(db)
+}
+
+type querier interface {
+	Query(string, ...any) (*sql.Rows, error)
+}
+
+func listProfiles(db querier) ([]Profile, error) {
+	rows, err := db.Query("SELECT id,name,avatar FROM profiles ORDER BY position")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Profile{}
+	for rows.Next() {
+		var p Profile
+		if err = rows.Scan(&p.ID, &p.Name, &p.Avatar); err != nil {
+			return nil, err
+		}
+		items = append(items, p)
+	}
+	return items, rows.Err()
+}
+
+func (s *Store) database() (*sql.DB, error) {
+	db, err := storage.Open(s.dir)
+	if err != nil {
+		return nil, err
+	}
+	err = storage.Update(db, func(tx *sql.Tx) error {
+		done, err := storage.Imported(tx, storage.Global, "profiles.json")
+		if err != nil || done {
+			return err
+		}
+		items, err := s.loadLegacy()
+		if err != nil {
+			return err
+		}
+		for i, p := range items {
+			if _, err = tx.Exec("INSERT INTO scopes(id) VALUES (?)", p.ID); err != nil {
+				return err
+			}
+			if _, err = tx.Exec("INSERT INTO profiles(id,name,avatar,position) VALUES (?,?,?,?)", p.ID, p.Name, p.Avatar, i); err != nil {
+				return err
+			}
+		}
+		return storage.MarkImported(tx, storage.Global, "profiles.json")
+	})
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
+func (s *Store) loadLegacy() ([]Profile, error) {
 	data, err := os.ReadFile(filepath.Join(s.dir, "profiles.json"))
 	if os.IsNotExist(err) {
 		return []Profile{}, nil
@@ -71,44 +134,33 @@ func (s *Store) CreateWithAvatar(name, avatar string) (Profile, error) {
 	if err := validateAvatar(avatar); err != nil {
 		return Profile{}, err
 	}
-	items, err := s.list()
+	db, err := s.database()
 	if err != nil {
 		return Profile{}, err
 	}
-	for _, p := range items {
-		if strings.EqualFold(p.Name, name) {
-			return Profile{}, fmt.Errorf("ya existe un perfil con ese nombre")
-		}
-	}
+	defer db.Close()
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
 		return Profile{}, err
 	}
 	p := Profile{ID: hex.EncodeToString(id[:]), Name: name, Avatar: avatar}
-	items = append(items, p)
-	data, err := json.MarshalIndent(items, "", "  ")
+	err = storage.Update(db, func(tx *sql.Tx) error {
+		items, err := listProfiles(tx)
+		if err != nil {
+			return err
+		}
+		for _, existing := range items {
+			if strings.EqualFold(existing.Name, name) {
+				return fmt.Errorf("ya existe un perfil con ese nombre")
+			}
+		}
+		if _, err = tx.Exec("INSERT INTO scopes(id) VALUES (?)", p.ID); err != nil {
+			return err
+		}
+		_, err = tx.Exec("INSERT INTO profiles(id,name,avatar,position) VALUES (?,?,?,?)", p.ID, p.Name, p.Avatar, len(items))
+		return err
+	})
 	if err != nil {
-		return Profile{}, err
-	}
-	if err = os.MkdirAll(s.dir, 0700); err != nil {
-		return Profile{}, err
-	}
-	f, err := os.CreateTemp(s.dir, "profiles-*.tmp")
-	if err != nil {
-		return Profile{}, err
-	}
-	defer os.Remove(f.Name())
-	if _, err = f.Write(data); err == nil {
-		err = f.Sync()
-	}
-	closeErr := f.Close()
-	if err != nil {
-		return Profile{}, err
-	}
-	if closeErr != nil {
-		return Profile{}, closeErr
-	}
-	if err = os.Rename(f.Name(), filepath.Join(s.dir, "profiles.json")); err != nil {
 		return Profile{}, err
 	}
 	return p, nil

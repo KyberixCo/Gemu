@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type Ref} from 'react';
-import {ArrowLeft,ArrowRight,Check,Gamepad2,LayoutGrid,Play,Power,TriangleAlert} from 'lucide-react';
+import {ArrowLeft,ArrowRight,Check,Gamepad2,LayoutGrid,MousePointer2,Play,Power,TriangleAlert} from 'lucide-react';
 import {subscribeGamepad} from './features/feedback/gamepad';
 import {interfaceAudio} from './features/feedback/audio';
 import {moveFocus} from './navigation';
@@ -9,19 +9,19 @@ import {Scene} from './Scene';
 import {GameTitle} from './GameIdentity';
 import type {Game} from './catalog';
 import './game-session.css';
-import {setGameplay} from './activity';
+import {setAssisting,setGameplay} from './activity';
 import {useInputMethod} from './input-method';
 import {navigationKey} from './keyboard-bindings';
 
 export type Session={gameId:string;title:string;state:string;menu:boolean;overlay?:boolean;background:boolean;message:string};
-type Host={LaunchGame:(id:string)=>Promise<Session>;GetGameSession:()=>Promise<Session>;OpenGameMenu:()=>Promise<Session>;ReturnToGemu:()=>Promise<Session>;ResumeGame:()=>Promise<void>;CloseGame:()=>Promise<void>;SetGameOverlayLanguage?:(language:string)=>Promise<void>};
+type Host={LaunchGame:(id:string)=>Promise<Session>;GetGameSession:()=>Promise<Session>;OpenGameMenu:()=>Promise<Session>;ReturnToGemu:()=>Promise<Session>;ResumeGame:()=>Promise<void>;CloseGame:()=>Promise<void>;OpenInputAssistant?:()=>Promise<void>;SetGameOverlayLanguage?:(language:string)=>Promise<void>};
 function host(){const app=(window as Window&{go?:{main?:{App?:Host}}}).go?.main?.App;if(!app?.LaunchGame)throw new Error('Reinicia Gemu para usar el lanzamiento de juegos.');return app;}
 export async function launchGame(id:string){setGameplay(true);try{return await host().LaunchGame(id);}catch(error){setGameplay(false);throw error;}}
 const isActive=(session:Session|null)=>!!session&&['requested','running','closing'].includes(session.state);
 
-type MenuProps={session:Session;game?:Game;confirm:boolean;busy:boolean;error:string;menuRef?:Ref<HTMLDivElement>;onResume:()=>void;onHome:()=>void;onClose:()=>void;onCancel:()=>void;onConfirm:()=>void};
+type MenuProps={session:Session;game?:Game;confirm:boolean;busy:boolean;error:string;menuRef?:Ref<HTMLDivElement>;onResume:()=>void;onHome:()=>void;onClose:()=>void;onCancel:()=>void;onConfirm:()=>void;onAssist?:()=>void};
 
-export function SessionMenu({session,game,confirm,busy,error,menuRef,onResume,onHome,onClose,onCancel,onConfirm}:MenuProps){
+export function SessionMenu({session,game,confirm,busy,error,menuRef,onResume,onHome,onClose,onCancel,onConfirm,onAssist}:MenuProps){
  const {t}=useLocalization();
  const input=useInputMethod();
  const status=t(session.state==='requested'?'Iniciando…':session.state==='closing'?'Cerrando…':'En ejecución');
@@ -46,6 +46,7 @@ export function SessionMenu({session,game,confirm,busy,error,menuRef,onResume,on
      </>:<div className="session-actions">
       <button data-nav className="session-action session-primary" disabled={busy||session.state==='requested'} onClick={onResume}><Play aria-hidden="true"/><span><strong>{t('Continuar jugando')}</strong><small>{t('Regresar directamente al juego.')}</small></span><ArrowRight className="session-action-end" aria-hidden="true"/></button>
       <button data-nav className="session-action" disabled={busy} onClick={onHome}><LayoutGrid aria-hidden="true"/><span><strong>{t('Volver a Gemu')}</strong><small>{t('Explorar tu biblioteca sin cerrar el juego.')}</small></span></button>
+      {onAssist&&<button data-nav className="session-action" disabled={busy} onClick={onAssist}><MousePointer2 aria-hidden="true"/><span><strong>{t('Asistencia de escritorio')}</strong><small>{t('Usar ratón y teclado en el juego o su ventana de inicio.')}</small></span></button>}
       <button data-nav data-session-action="close" className="session-action session-exit" disabled={busy||session.state!=='running'} onClick={onClose}><Power aria-hidden="true"/><span><strong>{t('Cerrar juego')}</strong><small>{t('Terminar la partida.')}</small></span></button>
      </div>}
      <div className="session-feedback" aria-live="polite">{busy&&<p>{t('Procesando…')}</p>}{session.message&&<p role="status">{t(session.message)}</p>}{error&&<p className="session-error" role="alert">{t(error)}</p>}</div>
@@ -59,7 +60,7 @@ export function SessionMenu({session,game,confirm,busy,error,menuRef,onResume,on
    </div>
    <footer className="session-footer">
     <div className="session-control-hints"><span><ActionHint action="navigate" axis="vertical"/>{t('Navegar')}</span><span><ActionHint action="confirm"/>{t('Seleccionar')}</span><span><ActionHint action="back"/>{t(confirm?'Cancelar':session.state==='requested'?'Volver a Gemu':'Continuar jugando')}</span></div>
-    <span className="session-shortcut"><kbd>F10</kbd>{t('Menú del juego')}{input.kind==='gamepad'&&input.family==='xbox'&&<span> · Xbox / View + Menu</span>}</span>
+    <span className="session-shortcut"><kbd>F10</kbd>{t('Menú del juego')}{input.kind==='gamepad'&&input.family==='xbox'&&<span> · Home / View + Menu</span>}</span>
    </footer>
   </div>
  </div>;
@@ -87,10 +88,12 @@ export function GameSession({games,notify,setBlocking}:{games:Game[];notify:(tex
   const accept=(next:Session)=>{if(!disposed)setSession(previous=>previous&&JSON.stringify(previous)===JSON.stringify(next)?previous:next);};
   const runtime=(window as Window&{runtime?:{EventsOn?:(name:string,callback:(next:Session)=>void)=>()=>void}}).runtime;
   const unsubscribe=runtime?.EventsOn?.('gemu:session',next=>{version++;accept(next);});
+  const assistRuntime=(window as Window&{runtime?:{EventsOn?:(name:string,callback:(active:boolean)=>void)=>()=>void}}).runtime;
+  const stopAssist=assistRuntime?.EventsOn?.('gemu:assist',active=>setAssisting(active));
   let polling=false;
   const poll=async()=>{if(disposed||polling)return;polling=true;clearTimeout(timer);const before=version;try{const next=await host().GetGameSession();if(version===before)accept(next);}catch{/* Desktop bridge is optional in browser previews. */}finally{polling=false;}if(!disposed&&!unsubscribe)timer=setTimeout(()=>void poll(),2000);};
   void poll();const refresh=()=>void poll();window.addEventListener('focus',refresh);
-  return()=>{disposed=true;clearTimeout(timer);unsubscribe?.();window.removeEventListener('focus',refresh);};
+  return()=>{disposed=true;clearTimeout(timer);unsubscribe?.();stopAssist?.();setAssisting(false);window.removeEventListener('focus',refresh);};
  },[]);
  useEffect(()=>{document.documentElement.dataset.gameplay=active&&(!session?.menu||!!session?.overlay)&&!session?.background?'true':'false';return()=>{delete document.documentElement.dataset.gameplay;};},[active,session?.menu,session?.overlay,session?.background]);
  useEffect(()=>{
@@ -135,6 +138,6 @@ export function GameSession({games,notify,setBlocking}:{games:Game[];notify:(tex
  if(!active||!session)return null;
  return <>
   {session.background&&!session.menu&&<button data-nav className="session-banner" onClick={()=>void run(()=>host().OpenGameMenu())} disabled={busy}><Gamepad2 size={22} aria-hidden="true"/><span><small>{t(session.state==='closing'?'Cerrando…':'En ejecución')}</small><strong dir="auto">{session.title}</strong></span><span className="session-banner-hint"><kbd>F10</kbd>{t('Menú del juego')}<ArrowRight size={18} aria-hidden="true"/></span></button>}
-  {session.menu&&!session.overlay&&<SessionMenu session={session} game={games.find(game=>game.id===session.gameId)} confirm={confirm} busy={busy} error={error} menuRef={root} onResume={()=>void run(()=>host().ResumeGame())} onHome={()=>void run(()=>host().ReturnToGemu())} onClose={()=>{setError('');setConfirm(true);interfaceAudio.play('open');}} onCancel={()=>setConfirm(false)} onConfirm={()=>void run(async()=>{await host().CloseGame();setConfirm(false);})}/>}
+  {session.menu&&!session.overlay&&<SessionMenu session={session} game={games.find(game=>game.id===session.gameId)} confirm={confirm} busy={busy} error={error} menuRef={root} onResume={()=>void run(()=>host().ResumeGame())} onHome={()=>void run(()=>host().ReturnToGemu())} onAssist={()=>void run(async()=>{const open=host().OpenInputAssistant;if(!open)throw new Error(t('Reinicia Gemu para usar la asistencia de escritorio.'));await open();})} onClose={()=>{setError('');setConfirm(true);interfaceAudio.play('open');}} onCancel={()=>setConfirm(false)} onConfirm={()=>void run(async()=>{await host().CloseGame();setConfirm(false);})}/>}
  </>;
 }

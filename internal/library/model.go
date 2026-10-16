@@ -24,6 +24,7 @@ type PlayerState struct {
 	Message      string        `json:"message"`
 }
 type Metadata struct {
+	Platform    string    `json:"platform,omitempty"`
 	Title       string    `json:"-"`
 	Description string    `json:"description"`
 	Genres      []string  `json:"genres"`
@@ -83,6 +84,7 @@ type SourceConfig struct {
 	ProfileID string `json:"profileId"`
 }
 type Snapshot struct {
+	revision    int64
 	Version     int            `json:"version"`
 	Sources     []SourceConfig `json:"sources"`
 	Games       []Entry        `json:"games"`

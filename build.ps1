@@ -52,6 +52,7 @@ try {
     $pushedLocation = $true
     $ownsConfiguration = $true
     [IO.File]::WriteAllText($configurationPath, $configuration, [Text.UTF8Encoding]::new($false))
+    & (Join-Path $PSScriptRoot 'scripts/build-input-assist.ps1')
     if ($ExperimentalOverlay) {
         & (Join-Path $PSScriptRoot 'scripts/build-overlay.ps1') -DownloadDependencies
     }

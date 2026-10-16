@@ -1,8 +1,8 @@
 # Centro de gestión
 
-**Estado actual de Juegos:** el asistente genérico importa juegos reales, metadatos, arte y perfiles mediante el backend. Steam es el primer adaptador; los demás siguen pendientes. Ver [Importación de bibliotecas](library-import.md). Las secciones siguientes conservan el diseño de los gestores que aún funcionan como borradores.
+**Estado actual de Juegos:** Steam importa juegos, metadatos, arte y perfiles mediante el backend. RetroArch incorpora detección, instalación portable y núcleos, configuración asistida, escaneo y lanzamiento de ROMs en Windows x64. Ver [Importación de bibliotecas](library-import.md) y [RetroArch](retroarch.md). Epic, GOG, la fuente manual y los demás emuladores siguen pendientes.
 
-Acceso desde **Gestión** en la barra lateral. Tres secciones con navegación por teclado y mando, diseño adaptable y formularios de demostración. Las configuraciones se guardan explícitamente en `gemu.management.v1` en localStorage. Las claves API permanecen en memoria y no forman parte del objeto persistido. Las fichas editadas y las rutas de arte son borradores separados del catálogo visible. No se detectan instalaciones, ejecutan emuladores, descargan imágenes ni llaman proveedores LLM.
+Acceso desde **Gestión** en la barra lateral, con navegación por teclado y mando, diseño adaptable y formularios. Las configuraciones generales se guardan explícitamente por jugador en SQLite bajo la clave `gemu.management.v1`; RetroArch se confirma dentro de su asistente junto al catálogo. La previsualización web utiliza localStorage para los borradores y requiere el host para RetroArch. Las claves API no forman parte del objeto persistido y se gestionan en el almacén seguro. Las fichas editadas y las rutas manuales de arte son borradores separados del catálogo visible. Steam, RetroArch y la búsqueda de arte usan el host; los demás emuladores y los proveedores LLM siguen pendientes.
 
 ## Contratos para el backend
 
@@ -14,9 +14,9 @@ Acceso desde **Gestión** en la barra lateral. Tres secciones con navegación po
 
 ## SQLite y FTS5
 
-SQLite aún no está integrado. Al seleccionar el driver Go, exigir y comprobar FTS5 mediante una prueba que cree una tabla virtual, inserte texto y ejecute MATCH (no asumir disponibilidad por el nombre del driver). La migración debe fallar con un diagnóstico claro si falta soporte.
+SQLite está integrado para perfiles, biblioteca y preferencias; contratos y migraciones en [Persistencia](persistence.md). La migración 2 incorpora FTS5, comprueba CREATE/INSERT/MATCH y reconstruye el índice de juegos existentes. La búsqueda de biblioteca ya consulta título, descripción y género, con filtros, ranking y paginación. Uso y API en [Búsqueda de biblioteca](search.md).
 
-Diseño propuesto: `library_documents(id, game_id, kind, title, description, genre, notes)` y tabla virtual `library_documents_fts USING fts5(title, description, genre, notes, content='library_documents', content_rowid='id', tokenize='unicode61 remove_diacritics 2')`. Incluir documentos de juegos y notas de fuentes/emuladores; mantener índice mediante triggers de insert/update/delete, reconstruir tras migraciones y usar transacciones. Consultas MATCH parametrizadas con límites y ranking bm25; convertir texto del usuario a términos escapados, sin pasar sintaxis FTS sin validación. FTS5 es búsqueda textual, no semántica. Entregar al agente resultados acotados con IDs y procedencia. Probar acentos, frases, actualizaciones, borrado y reconstrucción antes de conectar el índice a la UI.
+`library_documents` conserva propietario, juego, fuente y campos indexados. Su tabla FTS5 usa contenido externo y triggers para altas, cambios y bajas. MATCH recibe términos literales construidos desde el texto del usuario, con límites y ranking bm25. FTS5 es búsqueda textual, no semántica. Las notas de fuentes/emuladores y la conexión del asistente siguen pendientes; la columna `notes` está reservada y vacía. La API devuelve IDs y procedencia para permitir esa integración futura.
 
 ## Referencias de proveedores
 

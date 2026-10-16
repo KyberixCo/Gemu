@@ -1,4 +1,12 @@
 export type FocusDirection = 'left'|'right'|'up'|'down';
+// A game menu is a list of actions; its order should not depend on geometry.
+export function moveMenuFocus(direction:FocusDirection,items:readonly HTMLElement[],active:Element|null=document.activeElement){
+ if(!items.length)return false;
+ const index=items.findIndex(item=>item===active);
+ const next=items[index<0?0:(index+(direction==='up'||direction==='left'?-1:1)+items.length)%items.length];
+ next.focus();next.scrollIntoView({block:'nearest'});
+ return next!==active;
+}
 type FocusBounds = Pick<DOMRect,'x'|'y'|'width'|'height'>;
 
 // Compare the occupied intervals, not just centers: a full-width setting row

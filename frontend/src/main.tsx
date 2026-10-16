@@ -1,3 +1,6 @@
+import {preferencesStorage} from './persistence';
+import {PersistenceGate} from './PersistenceGate';
+import {useLibrarySearch} from './useLibrarySearch';
 import {ActionHint} from './ActionHint';
 import {useInputMethod} from './input-method';
 import {navigationKey} from './keyboard-bindings';
@@ -11,7 +14,7 @@ import { createRoot } from 'react-dom/client';
 import { Search, Settings, Gamepad2, Keyboard, Mouse, Heart, X, LayoutGrid, Monitor, Maximize, Home, ChevronLeft, ChevronRight, Volume2, VolumeX, Sparkles, Boxes } from 'lucide-react';
 import { games as demoGames, filterGames, type Game } from './catalog';
 import {libraryHost,loadLibrarySession,catalogFromLibrary,type Snapshot,type SourceInfo} from './library';
-import { moveFocus } from './navigation';
+import { moveFocus,moveMenuFocus,type FocusDirection } from './navigation';
 import './style.css';
 import {GameTitle,GameIcon} from './GameIdentity';
 import { Scene } from './Scene';
@@ -24,7 +27,7 @@ import { AmbientField } from './features/feedback/AmbientField';
 import {subscribeGamepad} from './features/feedback/gamepad';
 import {LocalizationProvider,useLocalization} from './localization';
 import {VirtualInput} from './features/feedback/VirtualInput';
-function read<T>(key:string, fallback:T):T { try { const value=JSON.parse(localStorage.getItem(profileKey(key))||'null'); return Array.isArray(value)&&value.every(x=>typeof x==='string') ? value as T : fallback; } catch { return fallback; } }
+function read<T>(key:string, fallback:T):T { try { const value=JSON.parse(preferencesStorage.getItem(profileKey(key))||'null'); return Array.isArray(value)&&value.every(x=>typeof x==='string') ? value as T : fallback; } catch { return fallback; } }
 function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()=>void}) {
  const {language,setLanguage,t}=useLocalization();
  const input=useInputMethod();
@@ -65,6 +68,14 @@ function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()
  useEffect(()=>{interfaceAudio.setAmbientSession(ambientSession);return()=>interfaceAudio.setAmbientSession(false);},[ambientSession]);
  useEffect(()=>{if(welcome==='done')document.querySelector<HTMLElement>('.game-card.selected')?.focus({preventScroll:true});},[welcome]);
  const returnFocus=useRef<HTMLElement|null>(null), dialog=useRef<HTMLDivElement>(null);
+ const libraryShortcut=useRef<(name:string)=>void>(()=>{});
+ const launching=useRef(false);
+ const play=async(game:Game)=>{
+  if(!game.installed){setNotice('Este juego no está instalado.');return;}
+  if(launching.current)return;
+  launching.current=true;
+  try{await launchGame(game.id);if(panelOpen)closePanel();}catch(error){setNotice(String(error));}finally{launching.current=false;}
+ };
  const [time,setTime]=useState(()=>new Date());
  useEffect(()=>{const timer=setInterval(()=>setTime(new Date()),30000);return()=>clearInterval(timer);},[]);
  const modal=panelOpen;
@@ -82,24 +93,29 @@ function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()
  
  useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),4500);return()=>clearTimeout(t);},[notice]);
  useEffect(()=>{
-  if(modal) { returnFocus.current=document.activeElement as HTMLElement; dialog.current?.querySelector<HTMLElement>('[data-nav]')?.focus(); }
-  else if(welcomeRef.current==='done')returnFocus.current?.focus();
+  if(modal) { returnFocus.current=document.activeElement as HTMLElement; (dialog.current?.querySelector<HTMLElement>('[data-detail-action]')??dialog.current?.querySelector<HTMLElement>('[data-nav]'))?.focus(); }
+  else if(welcomeRef.current==='done'){const target=returnFocus.current;const fallback=(document.querySelector<HTMLElement>('.game-card.selected')??document.querySelector<HTMLElement>('.stage-actions .primary'));if(target?.isConnected)target.focus();else fallback?.focus();}
  },[modal]);
  useEffect(()=>{
   const close=()=>{if(welcomeRef.current==='done'&&!modal&&document.querySelector('.management')){const event=new Event('gemu-management-back',{cancelable:true});window.dispatchEvent(event);if(event.defaultPrevented)return;}if(welcomeRef.current!=='done'){finishWelcome();return;}closePanel();};
   const action=(name:string)=>{
    if(document.documentElement.dataset.gameplay==='true'||name==='menu')return;
    if(name==='back'){close();return;}
+   if(name==='favorite'||name==='details'){if(welcomeRef.current==='done'&&!modal)libraryShortcut.current(name);return;}
    if(welcomeRef.current!=='done'){
     if(name==='confirm'){if(welcomeRef.current==='ready')(document.activeElement as HTMLElement)?.click();else finishWelcome();}
     else if(welcomeRef.current==='ready'){const root=document.querySelector('.welcome');if(root)moveFocus(name as 'left',root);}
     return;
    }
    if(name==='confirm'){(document.activeElement as HTMLElement)?.click();return;}
+   if(modal&&dialog.current?.querySelector('[data-detail-action]')){
+    const items=[...dialog.current.querySelectorAll<HTMLElement>('[data-detail-action],.close')].filter(item=>!item.hasAttribute('disabled'));
+    interfaceAudio.play('navigate',moveMenuFocus(name as FocusDirection,items));return;
+   }
    const element=document.activeElement;
    if(element instanceof HTMLInputElement&&element.type==='range'&&element.id!=='ambient-volume'&&element.id!=='ui-volume'&&(name==='left'||name==='right'))return;
    if(document.querySelector('.tv-editor')&&(name==='up'||name==='down')){interfaceAudio.play('navigate',moveFocus(name as 'up',document.querySelector('.tv-editor')!));return;}
-   if(element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement && element.type!=='range' || element instanceof HTMLSelectElement && !['ui-motion','language'].includes(element.id))return;
+   if(element instanceof HTMLSelectElement && !['ui-motion','language'].includes(element.id))return;
    if(element instanceof HTMLSelectElement&&element.id==='language'&&(name==='left'||name==='right')){setLanguage(name==='left'?'es':'en');return;}
    if(element instanceof HTMLInputElement&&element.type==='range'&&(element.id==='ambient-volume'||element.id==='ui-volume')&&(name==='left'||name==='right')){updatePreferences(element.id==='ambient-volume'?{ambientVolume:Math.max(0,Math.min(100,Number(element.value)+(name==='right'?5:-5)))}:{volume:Math.max(0,Math.min(100,Number(element.value)+(name==='right'?5:-5)))});return;}
    if(element instanceof HTMLSelectElement&&element.id==='ui-motion'&&(name==='left'||name==='right')){const values=['system','reduced','full'] as const;const index=values.indexOf(preferences.motion),next=Math.max(0,Math.min(2,index+(name==='right'?1:-1)));updatePreferences({motion:values[next]});return;}
@@ -117,6 +133,7 @@ function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()
     return;
    }
    if((key==='Enter'||key===' ')&&e.repeat&&!(e.target as HTMLElement).matches('input,select,textarea')){e.preventDefault();return;}
+   if(!modal&&!(e.target as HTMLElement).closest('input,select,textarea,[contenteditable=true]')&&['f','i'].includes(key.toLowerCase())){e.preventDefault();if(!e.repeat)libraryShortcut.current(key.toLowerCase()==='f'?'favorite':'details');return;}
    if(key==='/'&&!modal&&!(e.target as HTMLElement).matches('input,select,textarea')){e.preventDefault();document.querySelector<HTMLInputElement>('.search input')?.focus();interfaceAudio.play('navigate');return;}
    if(key==='Escape'){e.preventDefault();close();return;}
    if((key==='Enter'||key===' ')&&!(e.target as HTMLElement).matches('input,select,textarea')){e.preventDefault();if(!e.repeat)action('confirm');return;}
@@ -137,20 +154,33 @@ function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()
    if(dirs[key]) {e.preventDefault();action(dirs[key]);}
   };
   window.addEventListener('keydown',onKey);
-  const unsubscribe=subscribeGamepad({action});
+  const unsubscribe=subscribeGamepad({action,libraryActions:true});
   return()=>{window.removeEventListener('keydown',onKey);unsubscribe();};
  },[modal,welcome,reduced,preferences,language]);
- const toggle=(g:Game)=>{
+ const favoriteSaving=useRef(false);
+ const toggle=async(g:Game)=>{
+  if(favoriteSaving.current)return;
+  favoriteSaving.current=true;
+  const focusedCard=(document.activeElement as HTMLElement|null)?.closest('.game-card');
   const exists=favorites.includes(g.id), next=exists?favorites.filter(id=>id!==g.id):[...favorites,g.id];
-  setFavorites(next);
-  try {localStorage.setItem(profileKey('gemu.favorites'),JSON.stringify(next));interfaceAudio.play(exists?'favorite-off':'favorite-on');}
-  catch {setNotice('No se pudieron guardar los favoritos en este navegador.');interfaceAudio.play('error');}
+  try {await preferencesStorage.setItem(profileKey('gemu.favorites'),JSON.stringify(next));setFavorites(next);if(focusedCard)requestAnimationFrame(()=>{if(!focusedCard.isConnected)(document.querySelector<HTMLElement>('.game-card.selected')??document.querySelector<HTMLElement>('.stage-actions .primary'))?.focus({preventScroll:true});});interfaceAudio.play(exists?'favorite-off':'favorite-on');}
+  catch {setNotice('No se pudieron guardar los favoritos en este equipo.');interfaceAudio.play('error');}
+  finally {favoriteSaving.current=false;}
  };
  const changeTab=(name:string)=>{if(tab!==name){setTab(name);interfaceAudio.play('section');}};
  const changeSource=(name:string)=>{if(source!==name){setSource(name);interfaceAudio.play('section');}};
  const replayWelcome=()=>{interfaceAudio.stop();setPanelOpen(false);setDetail(null);setSettings(false);welcomeRef.current='ready';setWelcome('ready');};
- const visible=filterGames(games,query,source,tab==='Favoritos',favorites);
+ const searchSourceID=source==='Todos'?'':library.sources.find(item=>(item.name||item.id)===source)?.id??source;
+ const search=useLibrarySearch({profileID:profile.id,snapshot:library,demo,query,sourceID:searchSourceID,favoritesOnly:tab==='Favoritos',favorites});
+ const byGameID=useMemo(()=>new Map(games.map(game=>[game.id,game])),[games]);
+ const visible=search.enabled?search.hits.flatMap(hit=>{const game=byGameID.get(hit.gameId);return game?[game]:[];}):filterGames(games,query.trim(),source,tab==='Favoritos',favorites);
  const activeGame=visible.find(g=>g.id===selected.id)??visible[0]??selected;
+ libraryShortcut.current=name=>{
+  const focused=document.activeElement as HTMLElement|null;
+  if(sessionBlocking||tab==='Gestión'||!visible.length||!focused?.closest('.game-card,.stage-actions'))return;
+  if(name==='details')openDetails(activeGame);
+  else void toggle(activeGame);
+ };
  const displayedDetail=detail?(games.find(game=>game.id===detail.id)??detail):null;
  useEffect(()=>{if(!active)return;const timer=setTimeout(()=>interfaceAudio.selectGame(activeGame),600);return()=>clearTimeout(timer);},[activeGame,active]);
  return <div className="shell" data-motion={reduced?"reduced":"full"} data-welcome={welcome} style={{'--art':activeGame.color} as React.CSSProperties}>
@@ -169,26 +199,29 @@ function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()
  </aside>
  <header className="status-bar"><div className="location"><span className="status-line"/>{t(tab==='Inicio'?'JUGAR':tab).toUpperCase()}<button data-nav className="catalog-mode" onClick={()=>{setDemo(!demo);setDetail(null);setPanelOpen(false);}}>{t(demo?'CATÁLOGO DEMO · VER MIS JUEGOS':'MIS JUEGOS · VER DEMO')}</button></div><div className="status-right"><span className="input-device-icon" aria-label={t(input.kind==='gamepad'?'Mando conectado':'Teclado y ratón')}>{input.kind==='gamepad'?<Gamepad2 size={21}/>:input.kind==='mouse'?<Mouse size={21}/>:<Keyboard size={21}/>}</span><time>{time.toLocaleTimeString(language==='en'?'en':'es',{hour:'2-digit',minute:'2-digit',hour12:false})}</time><button data-nav className="avatar" aria-label={`${t('Perfiles')}: ${profile.name}`} title={profile.name} onClick={onManageProfiles}>{profile.name.slice(0,2).toLocaleUpperCase()}</button></div></header>
  <main className="console-main">
- {tab==='Gestión'?<Management initialArtworkGame={artworkGame} onArtworkOpened={()=>setArtworkGame(undefined)} onManageProfiles={onManageProfiles} profileName={profile.name} notify={setNotice} catalog={games} library={library} availableSources={providers} sourcesStatus={sourcesStatus} sourcesError={sourcesError} onRetrySources={()=>setConnectionAttempt(attempt=>attempt+1)} onLibraryChanged={acceptLibrary}/>:<>
+ {tab==='Gestión'?<Management profileID={profile.id} initialArtworkGame={artworkGame} onArtworkOpened={()=>setArtworkGame(undefined)} onManageProfiles={onManageProfiles} profileName={profile.name} notify={setNotice} catalog={games} library={library} availableSources={providers} sourcesStatus={sourcesStatus} sourcesError={sourcesError} onRetrySources={()=>setConnectionAttempt(attempt=>attempt+1)} onLibraryChanged={acceptLibrary}/>:<>
  {games.length>0&&<section className="game-stage" aria-label={t('Juego seleccionado')}>
   <div className="game-info" key={activeGame.id}>
    <div className="game-meta"><GameIcon game={activeGame}/><span>{activeGame.provider}</span><span className="meta-dot"/><span>{activeGame.genre}</span>{favorites.includes(activeGame.id)&&<Heart size={16} fill="currentColor"/>}</div>
    <GameTitle game={activeGame} className={'game-title title-'+activeGame.id}/>
    <p className="game-tagline">{activeGame.subtitle}</p>
-   <div className="stage-actions"><button data-nav className="primary" onClick={()=>openDetails(activeGame)}><ActionHint action="confirm"/> {t('Ver juego')}</button><button data-nav className="favorite" aria-label={t(favorites.includes(activeGame.id)?'Quitar de favoritos':'Añadir a favoritos')} aria-pressed={favorites.includes(activeGame.id)} onClick={()=>toggle(activeGame)}><Heart size={21} fill={favorites.includes(activeGame.id)?"currentColor":"none"}/></button><span className="installation-note">{t(activeGame.installed?'Instalado':demo?'Sin instalación · Demo':'Sin instalación')}</span></div>
+   <div className="stage-actions"><button data-nav className="primary" onClick={()=>void play(activeGame)}><ActionHint action="confirm"/> {t('Jugar ahora')}</button><button data-nav className="favorite" aria-label={t(favorites.includes(activeGame.id)?'Quitar de favoritos':'Añadir a favoritos')} aria-pressed={favorites.includes(activeGame.id)} onClick={()=>toggle(activeGame)}><ActionHint action="favorite"/><Heart size={21} fill={favorites.includes(activeGame.id)?"currentColor":"none"}/></button><button data-nav onClick={()=>openDetails(activeGame)}><ActionHint action="details"/> {t('Ver juego')}</button><span className="installation-note">{t(activeGame.installed?'Instalado':demo?'Sin instalación · Demo':'Sin instalación')}</span></div>
   </div>
   <div className="world-index" aria-hidden="true"><span>{String(games.findIndex(g=>g.id===activeGame.id)+1).padStart(2,'0')}</span><span className="index-rule"/><span>GEMU<br/>WORLDS</span></div>
  </section>}
  <section className={'game-shelf '+(tab!=='Inicio'?'expanded':'')} aria-label={t('Biblioteca de juegos')}>
-  <div className="shelf-toolbar"><div className="shelf-heading"><h2>{t(tab==='Inicio'?'Tus juegos':tab)}</h2><span>{String(visible.length).padStart(2,'0')}</span></div><div className="shelf-tools">{tab!=='Inicio'&&<div className="filters" aria-label={t("Fuente")}>{['Todos',...new Set(games.map(game=>game.provider))].map(s=><button data-nav key={s} className={source===s?"chosen":''} onClick={()=>changeSource(s)}>{s==='Todos'?t(s):s}</button>)}</div>}<label className="search"><Search size={18}/><input data-nav placeholder={t("Buscar")} value={query} onChange={e=>setQuery(e.target.value)} aria-label={t("Buscar juegos")}/><ActionHint action="search"/></label></div></div>
-  <div className="game-strip">{visible.map(g=><button data-nav className={'game-card '+(activeGame.id===g.id?'selected':'')} key={g.id} onFocus={()=>setSelected(g)} onClick={()=>{setSelected(g);openDetails(g);}} aria-label={`${t('Ver')} ${g.title}`} aria-pressed={activeGame.id===g.id}><div className={'tile-art'+(g.cover?' has-grid':'')}><Scene game={g} miniature/><div className="tile-shade"/>{!g.cover&&<span dir="auto" className={'tile-title title-'+g.id}>{g.title}</span>}{favorites.includes(g.id)&&<Heart className="tile-heart" size={16} fill="currentColor"/>}</div><div className="tile-caption"><span dir="auto"><GameIcon game={g}/>{g.title}</span><span className="selection-dot"/></div></button>)}</div>
-  {visible.length===0&&<div className="empty"><LayoutGrid size={28}/><div><h3>{t(!demo&&games.length===0?'Tu biblioteca está vacía':tab==='Favoritos'?'Aún no tienes favoritos':'No encontramos ese juego')}</h3><p>{t(!demo&&games.length===0?'Configura una fuente desde Gestión para incorporar tus juegos.':tab==='Favoritos'?'Guarda tus juegos con el corazón.':'Prueba otro nombre o cambia la fuente.')}</p></div><button data-nav onClick={()=>{changeTab('Biblioteca');setQuery('');setSource('Todos');}}>{t('Ver biblioteca')}</button></div>}
+  <div className="shelf-toolbar"><div className="shelf-heading"><h2>{t(tab==='Inicio'?'Tus juegos':tab)}</h2><span>{String(search.enabled?search.total:visible.length).padStart(2,'0')}</span></div><div className="shelf-tools">{tab!=='Inicio'&&<div className="filters" aria-label={t("Fuente")}>{['Todos',...new Set(games.map(game=>game.provider))].map(s=><button data-nav key={s} className={source===s?"chosen":''} onClick={()=>changeSource(s)}>{s==='Todos'?t(s):s}</button>)}</div>}<label className="search"><Search size={18}/><input data-nav placeholder={t("Buscar")} value={query} onChange={e=>setQuery(e.target.value)} aria-label={t("Buscar juegos")}/><ActionHint action="search"/></label></div></div>
+  <div className="game-strip">{visible.map(g=><button data-nav className={'game-card '+(activeGame.id===g.id?'selected':'')} key={g.id} onFocus={()=>setSelected(g)} onClick={()=>{setSelected(g);void play(g);}} onContextMenu={event=>{event.preventDefault();event.currentTarget.focus();setSelected(g);openDetails(g);}} aria-label={`${t('Jugar ahora')} ? ${g.title}`} aria-pressed={activeGame.id===g.id}><div className={'tile-art'+(g.cover?' has-grid':'')}><Scene game={g} miniature/><div className="tile-shade"/>{!g.cover&&<span dir="auto" className={'tile-title title-'+g.id}>{g.title}</span>}{favorites.includes(g.id)&&<Heart className="tile-heart" size={16} fill="currentColor"/>}</div><div className="tile-caption"><span dir="auto"><GameIcon game={g}/>{g.title}</span><span className="selection-dot"/></div></button>)}</div>
+  {search.enabled&&search.status==='loading'&&<p role="status">{t('Buscando…')}</p>}
+  {search.enabled&&search.status==='error'&&<div role="alert"><p>{t('No se pudo buscar en la biblioteca.')} {t(search.error)}</p><button data-nav onClick={search.retry}>{t('Reintentar')}</button></div>}
+  {search.enabled&&search.hasMore&&search.status==='ready'&&<button data-nav onClick={search.more}>{t('Cargar más juegos')}</button>}
+  {visible.length===0&&(!search.enabled||search.status==='ready')&&<div className="empty"><LayoutGrid size={28}/><div><h3>{t(!demo&&games.length===0?'Tu biblioteca está vacía':tab==='Favoritos'?'Aún no tienes favoritos':'No encontramos ese juego')}</h3><p>{t(!demo&&games.length===0?'Configura una fuente desde Gestión para incorporar tus juegos.':tab==='Favoritos'?'Guarda tus juegos con el corazón.':'Prueba otro nombre o cambia la fuente.')}</p></div><button data-nav onClick={()=>{changeTab('Biblioteca');setQuery('');setSource('Todos');}}>{t('Ver biblioteca')}</button></div>}
  </section>
  </>}
  </main>
- <footer className="control-bar"><div className="control-help"><span><ActionHint action="confirm"/> {t('Seleccionar')}</span><span><ActionHint action="back"/> {t('Volver')}</span><span className="keyboard-help"><ActionHint action="navigate"/> {t(tab==='Gestión'?'Navegar controles':'Cambiar juego')}</span></div><span className="position"><ChevronLeft size={13}/>{visible.length?String(visible.findIndex(g=>g.id===activeGame.id)+1).padStart(2,'0'):'00'} <span>/ {String(visible.length).padStart(2,'0')}</span><ChevronRight size={13}/></span><span className="control-device">{t(input.kind==='gamepad'?'Mando':input.kind==='mouse'?'Ratón':'Teclado')}</span></footer>
+ <footer className="control-bar"><div className="control-help"><span><ActionHint action="confirm"/> {t(tab==='Gesti?n'?'Seleccionar':'Jugar ahora')}</span>{tab!=='Gesti?n'&&<><span><ActionHint action="favorite"/> {t('Favoritos')}</span><span><ActionHint action="details"/> {t('Ver juego')}</span></>}<span><ActionHint action="back"/> {t('Volver')}</span><span className="keyboard-help"><ActionHint action="navigate"/> {t(tab==='Gestión'?'Navegar controles':'Cambiar juego')}</span></div><span className="position"><ChevronLeft size={13}/>{visible.length?String(visible.findIndex(g=>g.id===activeGame.id)+1).padStart(2,'0'):'00'} <span>/ {String(search.enabled?search.total:visible.length).padStart(2,'0')}</span><ChevronRight size={13}/></span><span className="control-device">{t(input.kind==='gamepad'?'Mando':input.kind==='mouse'?'Ratón':'Teclado')}</span></footer>
  </div>
- {panelPresent&&<div className="backdrop" data-open={modal&&panelReady} inert={!modal} aria-hidden={!modal}><div className="dialog" role="dialog" aria-modal={modal} aria-labelledby="dialog-title" ref={dialog}><button data-nav className="close icon-button" aria-label={t("Cerrar")} onClick={closePanel}><X/></button>{displayedDetail?<><p className="eyebrow">{displayedDetail.provider} / {displayedDetail.genre}</p><div id="dialog-title"><GameTitle game={displayedDetail} level={2}/></div><p>{displayedDetail.description}</p><div className="demo-note">{displayedDetail.installed?t("Juego instalado · Listo para jugar"):t("Título de demostración · Sin instalación")}</div>{displayedDetail.player&&<section><h3>{t("Perfil ·")} {displayedDetail.player.profile.name||t("Sin asociar")}</h3><p>{t(displayedDetail.player.message)}</p>{(displayedDetail.player.status==='ready'||displayedDetail.player.status==='cached')&&<><p>{displayedDetail.player.achievements.filter(a=>a.unlocked).length} / {displayedDetail.player.achievements.length} {t("logros desbloqueados")}</p><ul className="achievement-list">{displayedDetail.player.achievements.map(a=><li key={a.id}><strong>{a.unlocked?'✓ ':'○ '}{a.name}</strong><p>{a.description}</p></li>)}</ul></>}</section>}{displayedDetail.installed&&<button data-nav className="primary" onClick={()=>void launchGame(displayedDetail.id).then(()=>closePanel()).catch(error=>setNotice(String(error)))}>{t("Jugar ahora")}</button>}{displayedDetail.installed&&<button data-nav onClick={()=>{setArtworkGame(displayedDetail.id);setPanelOpen(false);setDetail(null);setTab('Gestión');}}>{t("Cambiar arte")}</button>}<button data-nav className="primary" onClick={()=>toggle(displayedDetail)}><Heart size={18}/>{favorites.includes(displayedDetail.id)?t("Quitar de favoritos"):t("Guardar en favoritos")}</button></>:<><p className="eyebrow">{t("SISTEMA")}</p><h2 id="dialog-title">{t("Ajustes")}</h2><p>{demo?t("Estás usando el catálogo de demostración."):t("Tus juegos, metadatos y perfil se guardan en este equipo.")}</p><div className="setting-row"><span>{input.kind==="gamepad"?<Gamepad2/>:<Keyboard/>} {t("Control")}</span><strong>{t(input.kind==="gamepad"?"Mando":"Teclado y ratón")}</strong></div><div className="setting-row"><span><Monitor/> {t("Fuentes")}</span><strong>{demo?t("Modo demostración"):`${library.sources.length} ${t('fuentes configuradas')}`}</strong></div><div className="feedback-settings">
+ {panelPresent&&<div className="backdrop" data-open={modal&&panelReady} inert={!modal} aria-hidden={!modal}><div className="dialog" role="dialog" aria-modal={modal} aria-labelledby="dialog-title" ref={dialog}><button data-nav className="close icon-button" aria-label={t("Cerrar")} onClick={closePanel}><X/></button>{displayedDetail?<><p className="eyebrow">{displayedDetail.provider} / {displayedDetail.genre}</p><div id="dialog-title"><GameTitle game={displayedDetail} level={2}/></div><p>{displayedDetail.description}</p><div className="demo-note">{displayedDetail.installed?t("Juego instalado · Listo para jugar"):t("Título de demostración · Sin instalación")}</div>{displayedDetail.player&&<section><h3>{t("Perfil ·")} {displayedDetail.player.profile.name||t("Sin asociar")}</h3><p>{t(displayedDetail.player.message)}</p>{(displayedDetail.player.status==='ready'||displayedDetail.player.status==='cached')&&<><p>{displayedDetail.player.achievements.filter(a=>a.unlocked).length} / {displayedDetail.player.achievements.length} {t("logros desbloqueados")}</p><ul className="achievement-list">{displayedDetail.player.achievements.map(a=><li key={a.id}><strong>{a.unlocked?'✓ ':'○ '}{a.name}</strong><p>{a.description}</p></li>)}</ul></>}</section>}<div className="game-detail-actions">{displayedDetail.installed&&<button data-nav data-detail-action className="primary" onClick={()=>void play(displayedDetail)}>{t("Jugar ahora")}</button>}{displayedDetail.installed&&<button data-nav data-detail-action onClick={()=>{setArtworkGame(displayedDetail.id);setPanelOpen(false);setDetail(null);setTab('Gestión');}}>{t("Cambiar arte")}</button>}<button data-nav data-detail-action className="primary" onClick={()=>toggle(displayedDetail)}><Heart size={18}/>{favorites.includes(displayedDetail.id)?t("Quitar de favoritos"):t("Guardar en favoritos")}</button></div></>:<><p className="eyebrow">{t("SISTEMA")}</p><h2 id="dialog-title">{t("Ajustes")}</h2><p>{demo?t("Estás usando el catálogo de demostración."):t("Tus juegos, metadatos y perfil se guardan en este equipo.")}</p><div className="setting-row"><span>{input.kind==="gamepad"?<Gamepad2/>:<Keyboard/>} {t("Control")}</span><strong>{t(input.kind==="gamepad"?"Mando":"Teclado y ratón")}</strong></div><div className="setting-row"><span><Monitor/> {t("Fuentes")}</span><strong>{demo?t("Modo demostración"):`${library.sources.length} ${t('fuentes configuradas')}`}</strong></div><div className="feedback-settings">
  <div className="setting-row"><span>{preferences.sound?<Volume2/>:<VolumeX/>} {t('Sonidos de interfaz')}</span><button data-nav className="setting-switch" role="switch" aria-checked={preferences.sound} onClick={()=>updatePreferences({sound:!preferences.sound})}>{t(preferences.sound?'Activados':'Silenciados')}</button></div>
  <div className="setting-row volume-setting"><label htmlFor="ui-volume">{t('Volumen')}</label><div><input data-nav id="ui-volume" type="range" min="0" max="100" step="5" value={preferences.volume} onChange={e=>updatePreferences({volume:Number(e.target.value)})}/><output htmlFor="ui-volume">{preferences.volume}%</output></div></div>
  <div className="setting-row"><label htmlFor="ui-motion">{t('Movimiento')}</label><select data-nav id="ui-motion" value={preferences.motion} onChange={e=>updatePreferences({motion:e.target.value as 'system'|'reduced'|'full'})}><option value="system">{t('Según el sistema')}</option><option value="reduced">{t('Reducido')}</option><option value="full">{t('Completo')}</option></select></div>
@@ -203,4 +236,4 @@ function App({profile,onManageProfiles}:{profile:GemuProfile;onManageProfiles:()
  {notice&&<div role="status" className="toast">{t(notice)}</div>}
  </div>;
 }
-createRoot(document.getElementById('root')!).render(<React.StrictMode><LocalizationProvider><ProfileGate>{(profile,manage)=><FirstRunSetup key={profile.id}><App profile={profile} onManageProfiles={manage}/></FirstRunSetup>}</ProfileGate><VirtualInput/></LocalizationProvider></React.StrictMode>);
+createRoot(document.getElementById('root')!).render(<React.StrictMode><PersistenceGate><LocalizationProvider><ProfileGate>{(profile,manage)=><FirstRunSetup key={profile.id} profileID={profile.id}><App profile={profile} onManageProfiles={manage}/></FirstRunSetup>}</ProfileGate><VirtualInput/></LocalizationProvider></PersistenceGate></React.StrictMode>);

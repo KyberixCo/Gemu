@@ -4,7 +4,7 @@ import {gamepadHint,inputMethod,useInputMethod} from '../../input-method';
 import {useLocalization} from '../../localization';
 import {isForeground,subscribeActivity} from '../../activity';
 import {hasGamepadCapture,subscribeGamepad} from './gamepad';
-import {stickVelocity,textField,updateField,type TextField} from './virtual-input';
+import {stickVelocity,textField,updateField,VirtualInputHotkeys,type TextField} from './virtual-input';
 import './virtual-input.css';
 
 const letters=['1234567890','qwertyuiop','asdfghjklñ','zxcvbnm,.-'];
@@ -34,14 +34,17 @@ export function VirtualInput(){
  };
  const callbacks=useRef({close,activate});callbacks.current={close,activate};
  useEffect(()=>{
-  let previous=new Set<number>(),deviceIndex:number|null=null,last=0,ready=false,blockAction=false,dpad=false;
+  let deviceIndex:number|null=null,last=0,blockAction=false,dpad=false;
+  const hotkeys=new VirtualInputHotkeys();
+  let lastField:TextField|null=null;
   const point={x:window.innerWidth/2,y:window.innerHeight/2};
   let hovered:HTMLElement|null=null;
   const clearHover=()=>{hovered?.classList.remove('virtual-pointer-target');hovered=null;};
-  const capture=()=>blockAction||!!runtime.current.field||runtime.current.pointer||inputMethod().kind==='gamepad'&&textField(document.activeElement);
+  const capture=()=>blockAction||!!runtime.current.field||runtime.current.pointer;
   const open=(target:TextField)=>{blockAction=true;setPointer(false);runtime.current.pointer=false;runtime.current.field=target;runtime.current.upper=false;runtime.current.symbol=target.type==='number';runtime.current.selected={row:target.type==='number'?0:1,col:0};setField(target);setUpper(false);setSymbol(runtime.current.symbol);setSelected(runtime.current.selected);};
   const focus=(event:FocusEvent)=>{
    if(panel.current?.contains(event.target as Node))return;
+   if(textField(event.target as Element))lastField=event.target as TextField;
    if(runtime.current.field&&event.target!==runtime.current.field){runtime.current.field=null;setField(null);}
   };
   const key=(event:KeyboardEvent)=>{
@@ -49,7 +52,7 @@ export function VirtualInput(){
    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();callbacks.current.close();setPointer(false);runtime.current.pointer=false;}
    else if(!panel.current?.contains(event.target as Node)){callbacks.current.close();setPointer(false);runtime.current.pointer=false;}
   };
-  const pause=()=>{clearHover();ready=false;previous.clear();last=0;setShown(isForeground());if(!isForeground()){setPointer(false);runtime.current.pointer=false;callbacks.current.close();}};
+  const pause=()=>{clearHover();hotkeys.reset();last=0;setShown(isForeground());if(!isForeground()){setPointer(false);runtime.current.pointer=false;callbacks.current.close();}};
   const stopActivity=subscribeActivity(pause);
   window.addEventListener('blur',pause);window.addEventListener('focus',pause);document.addEventListener('visibilitychange',pause);
   document.addEventListener('focusin',focus);window.addEventListener('keydown',key,true);
@@ -72,7 +75,7 @@ export function VirtualInput(){
     }
     return;
    }
-   if(!state.field){if(textField(document.activeElement))open(document.activeElement);return;}
+   if(!state.field)return;
    if(action==='confirm'){
     const rows=[...(state.symbol?symbols:letters).map(row=>Array.from(row)),commands];
     callbacks.current.activate(rows[state.selected.row][state.selected.col]);return;
@@ -84,17 +87,26 @@ export function VirtualInput(){
   },devices:pads=>{
    blockAction=false;
    setShown(isForeground()&&!hasGamepadCapture(capture));
-   if(!isForeground()||hasGamepadCapture(capture)){clearHover();ready=false;previous.clear();last=0;return;}
+   if(!isForeground()||hasGamepadCapture(capture)){clearHover();hotkeys.reset();last=0;return;}
    const pad=pads.find(p=>p.mapping==='standard'&&p.index===inputMethod().index)??pads.find(p=>p.mapping==='standard');
-   if(!pad){clearHover();callbacks.current.close();setPointer(false);runtime.current.pointer=false;ready=false;previous.clear();return;}
+   if(!pad){clearHover();callbacks.current.close();setPointer(false);runtime.current.pointer=false;hotkeys.reset();deviceIndex=null;return;}
    const buttons=new Set(pad.buttons.flatMap((button,index)=>button.pressed?[index]:[]));
    dpad=[12,13,14,15].some(index=>buttons.has(index));
-   if(deviceIndex!==pad.index){deviceIndex=pad.index;ready=false;last=0;}
+   if(deviceIndex!==pad.index){deviceIndex=pad.index;hotkeys.reset();last=0;}
    const axes=pad.axes.map(stickVelocity);
-   if(!ready){previous=buttons;if(!buttons.size&&axes.every(axis=>axis===0))ready=true;return;}
-   const pressed=(index:number)=>buttons.has(index)&&!previous.has(index);
-   previous=buttons;
-   if(pressed(11)&&!runtime.current.field){blockAction=true;runtime.current.pointer=!runtime.current.pointer;setPointer(runtime.current.pointer);}
+   const shortcut=hotkeys.sample(buttons);
+   if(!shortcut.ready){blockAction=true;return;}
+   const {pressed}=shortcut;
+   blockAction=shortcut.suppress;
+   if(shortcut.keyboard){
+    if(runtime.current.field)callbacks.current.close();
+    else {
+     const target=textField(document.activeElement)?document.activeElement:lastField&&textField(lastField)&&lastField.isConnected?lastField:null;
+     if(target)open(target);
+    }
+   }
+   if(shortcut.suppress)return;
+   if(shortcut.pointer){callbacks.current.close();blockAction=true;runtime.current.pointer=!runtime.current.pointer;setPointer(runtime.current.pointer);}
    const state=runtime.current;
    if(state.field){
     if(!state.field.isConnected||!textField(state.field)){callbacks.current.close();return;}
@@ -114,7 +126,7 @@ export function VirtualInput(){
    if(pressed(0)&&interactive&&!interactive.closest('[inert]')&&!interactive.matches(':disabled')){
     blockAction=true;
     interactive.focus({preventScroll:true});
-    if(textField(interactive))open(interactive);else interactive.click();
+    interactive.click();
    }
    if(pressed(2)&&target&&!target.closest('[inert]'))target.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:point.x,clientY:point.y,button:2}));
    const scroll=(axes[3]??0)*900*elapsed;
@@ -128,7 +140,7 @@ export function VirtualInput(){
  const labels:Record<string,string>={shift:t('Mayúsculas'),symbols:symbol?'ABC':'#+=',space:t('Espacio'),delete:t('Borrar'),done:t('Listo')};
  return <>
   {pointer&&<div className="virtual-cursor" ref={cursor} aria-hidden="true"><MousePointer2 size={28}/></div>}
-  {!field&&input.kind==='gamepad'&&<button className="virtual-input-toggle" onClick={()=>{setPointer(value=>!value);runtime.current.pointer=!runtime.current.pointer;}} aria-pressed={pointer}><MousePointer2 size={16}/><span>{t(pointer?'Stick izquierdo: mover · Stick derecho: desplazar':'R3 · Ratón virtual')}</span>{pointer&&<><span className="pad-key">{gamepadHint(input.family,'confirm')}</span>{t('Clic')}<span className="pad-key">{gamepadHint(input.family,'back')}</span>{t('Salir')}</>}</button>}
+  {!field&&input.kind==='gamepad'&&<div className="virtual-input-tools"><span className="virtual-keyboard-shortcut"><Keyboard size={16}/> Home + <span className="pad-key">{gamepadHint(input.family,'favorite')}</span> · {t('Teclado virtual')}</span><button className="virtual-input-toggle" onClick={()=>{setPointer(value=>!value);runtime.current.pointer=!runtime.current.pointer;}} aria-pressed={pointer}><MousePointer2 size={16}/><span>{t(pointer?'Stick izquierdo: mover · Stick derecho: desplazar':'R3 · Ratón virtual')}</span>{pointer&&<><span className="pad-key">{gamepadHint(input.family,'confirm')}</span>{t('Clic')}<span className="pad-key">{gamepadHint(input.family,'back')}</span>{t('Salir')}</>}</button></div>}
   {field&&<div className="virtual-keyboard" ref={panel} role="dialog" aria-modal="true" aria-label={t('Teclado virtual')} onKeyDown={event=>{
    if(event.key==='Tab'){event.preventDefault();const buttons=Array.from(panel.current!.querySelectorAll<HTMLButtonElement>('button'));const index=buttons.indexOf(document.activeElement as HTMLButtonElement);buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();event.stopPropagation();}
   }}>
@@ -136,7 +148,7 @@ export function VirtualInput(){
    <div className="virtual-keyboard-preview" aria-live={field.type==='password'?'off':'polite'}>{field.type==='password'?'•'.repeat(field.value.length):field.value||field.placeholder||t('Escribe con el mando')}</div>
    <div className="virtual-keyboard-rows">{rows.map((row,r)=><div className="virtual-keyboard-row" key={r}>{row.map((value,c)=><button data-key={`${r}:${c}`} key={value} className={selected.row===r&&selected.col===c?'selected':''} onClick={()=>activate(value)}>{upper?value.toLocaleUpperCase():value}</button>)}</div>)}
    <div className="virtual-keyboard-row virtual-keyboard-actions">{commands.map((command,c)=><button data-key={`4:${c}`} key={command} className={(selected.row===4&&selected.col===c?'selected ':'')+(command==='done'?'virtual-keyboard-done':'')} aria-pressed={command==='shift'?upper:command==='symbols'?symbol:undefined} onClick={()=>activate(command)}>{labels[command]}</button>)}</div></div>
-   <div className="virtual-keyboard-help"><span>{t('Cruceta / stick: elegir')}</span> · <span className="pad-key">{gamepadHint(input.family,'confirm')}</span> {t('Escribir')} · <span className="pad-key">{gamepadHint(input.family,'back')}</span> {t('Listo')}<span>{t('LB: símbolos · RB: espacio')}</span></div>
+   <div className="virtual-keyboard-help"><span>{t('Cruceta / stick: elegir')}</span> · <span className="pad-key">{gamepadHint(input.family,'confirm')}</span> {t('Escribir')} · <span className="pad-key">{gamepadHint(input.family,'back')}</span> {t('Listo')}<span>{t('LB: símbolos · RB: espacio')} · Home + {gamepadHint(input.family,'favorite')}: {t('Listo')}</span></div>
   </div>}
  </>;
 }

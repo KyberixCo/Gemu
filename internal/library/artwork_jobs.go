@@ -414,6 +414,7 @@ func (s *Service) CommitArtwork(req ArtworkCommit) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	delete(s.artJobs, req.ID)
+	snapshot.revision++
 	return snapshot, nil
 }
 func (s *Service) UndoArtwork() (Snapshot, error) {
@@ -447,5 +448,9 @@ func (s *Service) UndoArtwork() (Snapshot, error) {
 		}
 	}
 	snapshot.ArtworkUndo = nil
-	return snapshot, s.writeSnapshot(snapshot)
+	if err := s.writeSnapshot(snapshot); err != nil {
+		return Snapshot{}, err
+	}
+	snapshot.revision++
+	return snapshot, nil
 }

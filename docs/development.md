@@ -86,7 +86,7 @@ El inspector lee `libraryfolders.vdf` y manifiestos ACF, consulta múltiples bib
 
 ## Estado del primer corte
 
-La interfaz se ejecuta en un host Wails v2.16.0. El proceso genérico de importación está conectado a Gestión y al catálogo principal, con Steam como primer adaptador. Juegos, metadatos, arte y perfil se guardan en una biblioteca JSON versionada. Pendientes para el siguiente corte vertical: SQLite, lanzamiento real, XInput, seguimiento del juego y recuperación del foco. No hay cambios al shell, registro ni inicio automático del equipo.
+La interfaz se ejecuta en un host Wails v2.16.0. El proceso genérico de importación está conectado a Gestión y al catálogo principal, con Steam como primer adaptador. Perfiles, biblioteca, favoritos y ajustes se guardan en SQLite con migración de datos anteriores; el arte permanece en archivos locales. Consulta [Persistencia](persistence.md). Lanzamiento Steam, seguimiento de procesos y menú de retorno ya están implementados; su validación física se describe en [Sesiones de juego](game-sessions.md). No hay cambios al shell, registro ni inicio automático del equipo.
 
 Consulta [las decisiones de diseño](design.md), [el plan de movimiento y sonido](feedback.md) y [el siguiente sprint](roadmap.md).
 

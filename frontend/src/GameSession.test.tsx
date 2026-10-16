@@ -58,5 +58,15 @@ it('shows physical controller hints when navigating with a gamepad',()=>{
  expect(markup).toContain('data-input="gamepad"');
  expect(markup).toContain('>A</span>');
  expect(markup).toContain('>B</span>');
- expect(markup).toContain('Xbox / View + Menu');
+ expect(markup).toContain('View + Menu');
+ expect(markup).toContain('Home / View + Menu');
+ expect(markup).not.toContain('Xbox /');
+});
+it('offers assistance before confirming a game process',()=>{
+ vi.stubGlobal('localStorage',{getItem:()=> 'es'});
+ const markup=renderToStaticMarkup(<LocalizationProvider><SessionMenu session={{...session,state:'requested'}} confirm={false} busy={false} error="" onResume={()=>{}} onHome={()=>{}} onClose={()=>{}} onCancel={()=>{}} onConfirm={()=>{}} onAssist={()=>{}}/></LocalizationProvider>);
+ const actions=buttons(markup);
+ expect(actions).toHaveLength(4);
+ expect(actions[2]).toContain('Asistencia de escritorio');
+ expect(actions[2]).not.toContain('disabled=""');
 });

@@ -50,17 +50,22 @@ Para usar los nuevos métodos Wails hay que reiniciar la aplicación de escritor
 
 ### Entrada virtual en Gemu
 
-No hace falta conectar teclado ni ratón para introducir texto en la aplicación. Al llegar a un campo con el mando, pulsa confirmar para abrir el teclado virtual. También se abre al hacer clic sobre un campo con el cursor virtual. El panel compacto se ancla al borde inferior, muestra el texto que estás editando y oculta las contraseñas. Funciona desde la creación de perfiles, el asistente inicial, las búsquedas y la gestión de rutas o credenciales. Los cambios se aplican al campo; «Listo» cierra el teclado y devuelve el foco, sin enviar formularios ni guardar ajustes por sí solo.
+Para controlar ventanas externas de juegos y launchers existe además el
+[asistente de escritorio independiente](desktop-assistance.md), con herramienta
+flotante, entrada nativa y bandeja del sistema. Los controles descritos debajo
+pertenecen a la interfaz HTML de Gemu.
+
+No hace falta conectar teclado ni ratón para introducir texto en la aplicación. Enfoca un campo y pulsa Home + X en Xbox (Home + □ en PlayStation; Home + Y en Nintendo) para abrir o cerrar el teclado virtual. Son los botones estándar 16 + 2. Hay que soltar ambos botones antes de repetir la combinación. Steam y Game Bar también pueden responder a Home. Llegar al campo con la cruceta o hacer clic sobre él no abre el teclado ni captura la navegación. El panel compacto se ancla al borde inferior, muestra el texto que estás editando y oculta las contraseñas. Funciona desde la creación de perfiles, el asistente inicial, las búsquedas y la gestión de rutas o credenciales. Los cambios se aplican al campo; «Listo» cierra el teclado y devuelve el foco, sin enviar formularios ni guardar ajustes por sí solo.
 
 - Cruceta o stick izquierdo: elegir una tecla; botón inferior: escribir; botón derecho: cerrar.
 - Botón izquierdo: borrar; botón superior: alternar mayúsculas.
 - LB: letras/símbolos (incluye acentos y caracteres de rutas); RB: espacio.
-- R3 (pulsar el stick derecho): activar/desactivar el ratón virtual cuando el teclado está cerrado.
+- R3 (pulsar el stick derecho): activar/desactivar el ratón virtual; si el teclado estaba abierto, lo cierra. También funciona con un campo de texto enfocado. B / Esc sale del ratón virtual.
 - En modo ratón, stick izquierdo: mover el cursor con aceleración y zona muerta; stick derecho vertical: desplazar el panel bajo el cursor; botón inferior: clic; botón izquierdo: menú contextual; botón derecho: salir. Tras enfocar un selector o deslizador, la cruceta ajusta su valor.
 
 La entrada virtual se pausa al perder foco y requiere soltar los controles al volver. Respeta la captura del menú de partida y de la prueba de mandos. Utiliza el mapeo estándar del navegador y actúa dentro de Gemu; no emula dispositivos del sistema ni envía entrada a juegos, emuladores o diálogos nativos de Windows. El navegador no permite detectar con fiabilidad si hay teclado o ratón físicos conectados, por lo que la función se ofrece al utilizar el mando sin depender de esa detección.
 
-Para validar con hardware, crear un perfil, buscar un juego y editar una ruta usando solo el mando; comprobar contraseñas, mayúsculas, selección de texto y borrado. Activar R3, hacer clic y desplazar un panel largo. Mantener un botón al cambiar de ventana o abrir/cerrar el teclado no debe producir una segunda activación.
+Para validar con hardware, crear un perfil, buscar un juego y editar una ruta usando solo el mando; comprobar contraseñas, mayúsculas, selección de texto y borrado. Pasar por búsqueda con la cruceta debe permitir seguir navegando sin abrir el teclado. Abrirlo con Home + X, cerrarlo con B y seguir navegando; repetir con Home + X para cerrarlo y soltar Home antes que X para comprobar que no cambia favoritos. Comprobar Home para recuperar el menú de Gemu durante una partida, además de View + Menu y F10. Activar R3, hacer clic y desplazar un panel largo; repetir con un campo enfocado y con el teclado abierto. Mantener un botón al cambiar de ventana o abrir/cerrar el teclado no debe producir una segunda activación.
 
 1. En Windows/WebView2, conectar un mando y pulsar un botón para que el host lo exponga.
 2. Navegar por perfiles, asistente, biblioteca y ajustes con cruceta y stick; mantener confirmar al abrir una pantalla no debe activar otra opción.
@@ -69,3 +74,9 @@ Para validar con hardware, crear un perfil, buscar un juego y editar una ruta us
 5. Abrir la prueba visual, comprobar botones y salir con B / Círculo.
 
 Las pruebas automatizadas cubren lectura, umbral analógico, prioridad de cruceta, varios mandos, desconexión y recuperación del foco. La compatibilidad física debe verificarse con hardware real.
+
+## Acciones de la biblioteca
+
+Sobre un juego seleccionado, el botón inferior (A en Xbox) lo lanza directamente, el izquierdo (X) añade o quita favoritos y el superior (Y) abre el submenú opcional. En PlayStation corresponden a ×, □ y △; en Nintendo, B, Y y X. Con teclado se usan Enter, F e I; con ratón, clic para jugar y clic derecho o «Ver juego» para abrir el submenú. Los títulos sin instalación muestran un aviso al intentar jugar.
+
+El submenú enfoca primero «Jugar ahora» cuando está disponible; de lo contrario, favoritos. La cruceta recorre las acciones en orden y B / Esc cierra el panel y devuelve el foco a la biblioteca. Mantener X o Y pulsado no repite la acción.

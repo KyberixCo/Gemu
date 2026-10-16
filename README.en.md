@@ -55,6 +55,9 @@ The detailed documentation below is in Spanish.
 - [Motion and sound](docs/feedback.md)
 - [Management and integration contracts](docs/management.md)
 - [Development guide](docs/development.md)
+- [SQLite persistence and migration](docs/persistence.md)
+- [Library search](docs/search.md)
+- [RetroArch installation and setup](docs/retroarch.md)
 
 ## License
 

@@ -9,6 +9,7 @@ import (
 	"kyberix.com/gemu/internal/profiles"
 	"kyberix.com/gemu/internal/providers/content"
 	"kyberix.com/gemu/internal/providers/steam"
+	"kyberix.com/gemu/internal/retroarch"
 	"path/filepath"
 	"sync"
 	"time"
@@ -16,14 +17,16 @@ import (
 
 // Each selected Gemu profile owns its library and Steam association.
 type App struct {
-	launch   *launcher.Service
-	ctx      context.Context
-	library  *library.Service
-	profiles *profiles.Store
-	sources  map[string]library.Source
-	dir      string
-	mu       sync.Mutex
-	vault    credentials.Vault
+	launch    *launcher.Service
+	ctx       context.Context
+	library   *library.Service
+	profiles  *profiles.Store
+	sources   map[string]library.Source
+	dir       string
+	mu        sync.Mutex
+	vault     credentials.Vault
+	retro     *retroarch.Service
+	profileID string
 }
 
 func (a *App) GetProfiles() ([]profiles.Profile, error)            { return a.profiles.List() }
@@ -39,12 +42,25 @@ func (a *App) SelectProfile(id string) error {
 	if err != nil {
 		return err
 	}
+	if a.retro == nil {
+		a.retro = retroarch.New(a.dir)
+	}
+	sources := map[string]library.Source{}
+	for key, source := range a.sources {
+		sources[key] = source
+	}
+	sources["retroarch"] = retroarch.NewSource(a.retro, id)
+	next := library.New(dir, sources).WithPlayerStorage(a.dir, id).WithArtworkDirectory(filepath.Join(a.dir, "art")).WithContentProviders(map[string]library.ContentProvider{
+		"steamgriddb": content.NewSteamGridDB(), "screenscraper": content.NewScreenScraper(),
+	})
+	if _, err = next.Load(); err != nil {
+		return err
+	}
 	if a.library != nil {
 		a.library.CancelArtworkSearches()
 	}
-	a.library = library.New(dir, a.sources).WithArtworkDirectory(filepath.Join(a.dir, "art")).WithContentProviders(map[string]library.ContentProvider{
-		"steamgriddb": content.NewSteamGridDB(), "screenscraper": content.NewScreenScraper(),
-	})
+	a.library = next
+	a.profileID = id
 	a.vault = credentials.New(dir)
 	return nil
 }

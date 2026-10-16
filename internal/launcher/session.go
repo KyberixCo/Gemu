@@ -32,15 +32,17 @@ type Session struct {
 	Message    string `json:"message"`
 }
 type Service struct {
-	mu       sync.Mutex
-	platform Platform
-	session  Session
-	root     string
-	baseline map[Process]bool
-	tracked  []Process
-	started  time.Time
-	absent   int
-	lastScan time.Time
+	mu              sync.Mutex
+	platform        Platform
+	session         Session
+	root            string
+	baseline        map[Process]bool
+	tracked         []Process
+	started         time.Time
+	absent          int
+	lastScan        time.Time
+	direct          *Process
+	assistRequested bool
 }
 
 type overlayPlatform interface {
@@ -59,6 +61,9 @@ func (s *Service) SetOverlayLanguage(language string) {
 }
 
 func (s *Service) syncOverlay() {
+	if s.direct != nil {
+		return
+	}
 	if p, ok := s.platform.(overlayPlatform); ok {
 		ready := p.SyncOverlay(s.tracked, s.session)
 		if !s.session.Menu || s.session.Overlay {
@@ -105,6 +110,7 @@ func (s *Service) Launch(id, title string, installation domain.Installation) (Se
 		return s.session, err
 	}
 	s.root = installation.Path
+	s.direct = nil
 	s.started = time.Now()
 	s.tracked = nil
 	s.absent = 0
@@ -129,7 +135,7 @@ func (s *Service) Poll() (Session, bool) {
 			if err == nil {
 				found := []Process{}
 				for _, p := range processes {
-					if Within(s.root, p.Path) && !s.baseline[p] {
+					if s.direct != nil && p == *s.direct || s.direct == nil && Within(s.root, p.Path) && !s.baseline[p] {
 						found = append(found, p)
 					}
 				}
@@ -142,7 +148,7 @@ func (s *Service) Poll() (Session, bool) {
 					}
 				} else if s.session.State != "requested" {
 					s.absent++
-					if s.absent >= 10 {
+					if s.absent >= 10 || s.direct != nil && s.absent >= 2 {
 						s.session.State = "ended"
 						s.session.Menu = false
 						s.session.Message = ""
@@ -184,6 +190,9 @@ func (s *Service) Poll() (Session, bool) {
 				} else {
 					s.session.Menu = false
 				}
+			case 4:
+				s.session.Menu = false
+				s.assistRequested = true
 			}
 		}
 		if shortcut && (s.session.State == "requested" || s.session.State == "running" || s.session.State == "closing") {
@@ -209,6 +218,15 @@ func (s *Service) Poll() (Session, bool) {
 	return s.session, restore
 }
 func (s *Service) Current() Session { s.mu.Lock(); defer s.mu.Unlock(); return s.session }
+
+// TakeAssistanceRequest transfers a native-overlay request to the desktop host.
+func (s *Service) TakeAssistanceRequest() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	requested := s.assistRequested
+	s.assistRequested = false
+	return requested
+}
 
 // ReleaseShortcuts is called by the polling thread before it exits.
 func (s *Service) ReleaseShortcuts() {

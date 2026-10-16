@@ -1,5 +1,9 @@
 import {expect,it,vi} from 'vitest';
 import {catalogFromLibrary,contentHost,credentialHost,loadLibrarySession,libraryHost,artworkHost,type Snapshot} from './library';
+it('preserves the real console for RetroArch without treating it as a genre or inventing achievements',()=>{
+ const snapshot:Snapshot={version:1,sources:[{id:'retroarch',name:'RetroArch',root:'C:/RetroArch',profileId:''}],games:[{sourceId:'retroarch',game:{ID:'retroarch:one',Title:'Homebrew',Installations:[{Provider:'retroarch',ExternalID:'nes',Path:'D:/ROMs/Homebrew.nes',Installed:true}]},metadata:{platform:'Nintendo NES',description:'',genres:[],cover:'',background:'',origin:'local',status:'pending'},player:{profile:{id:'',name:'',origin:''},status:'pending',message:'',achievements:[]}}]};
+ const game=catalogFromLibrary(snapshot)[0];expect(game.platform).toBe('Nintendo NES');expect(game.genre).toBe('Sin clasificar');expect(game.emulated).toBe(true);expect(game.installed).toBe(true);expect(game.player?.achievements).toEqual([]);
+});
 it('localizes generated library text while preserving names and fetched metadata',()=>{
  const snapshot:Snapshot={version:1,sources:[],games:[{sourceId:'steam',game:{ID:'steam:42',Title:'Biblioteca',Installations:[]},metadata:{description:'',genres:[],cover:'',background:'',origin:'steam',status:'pending'},player:{profile:{id:'player',name:'Perfil',origin:'local'},status:'pending',message:'',achievements:[]}}]};
  const english=catalogFromLibrary(snapshot,'en')[0],spanish=catalogFromLibrary(snapshot,'es')[0];

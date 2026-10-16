@@ -1,6 +1,14 @@
 // Host messages remain canonical in saved snapshots so they can be translated
 // at display time, including diagnostics from older library imports.
+import {retroarchTechnicalSpanish,retroarchEnglish} from './retroarch-copy';
 export const hostMessages:Record<string,string>={
+ ...retroarchEnglish,
+ 'Reinicia Gemu para usar la búsqueda de biblioteca.':'Restart Gemu to use library search.',
+ 'No se pudo buscar en la biblioteca.':'Could not search the library.',
+ 'Buscando…':'Searching…',
+ 'Cargar más juegos':'Load more games',
+ 'Reinicia Gemu con dev.ps1 o abre el ejecutable actualizado para usar SQLite.':'Restart Gemu with dev.ps1 or open the updated executable to use SQLite.',
+ 'No se pudieron guardar los favoritos en este equipo.':'Could not save favorites on this computer.',
  'selecciona un perfil de Gemu':'select a Gemu profile',
  'el perfil cambió; repite la búsqueda de arte':'the profile changed; search for artwork again',
  'gestor de credenciales no disponible':'credential manager unavailable',
@@ -105,6 +113,22 @@ export const hostMessages:Record<string,string>={
 };
 
 const technicalSpanish:Record<string,string>={
+ ...retroarchTechnicalSpanish,
+ 'FTS5 is required for library search':'La búsqueda de biblioteca requiere FTS5',
+ 'FTS5 verification failed':'No se pudo verificar FTS5.',
+ 'search query is too long or invalid':'La búsqueda es demasiado larga o no es válida.',
+ 'search query has too many terms':'La búsqueda contiene demasiados términos.',
+ 'invalid search pagination':'La página de búsqueda no es válida.',
+ 'database schema is newer than this version of Gemu':'La versión de la base de datos no es compatible con este Gemu. Abre una versión actualizada.',
+ 'library changed while saving; reload and retry':'La biblioteca cambió al guardar. Vuelve a cargarla e inténtalo de nuevo.',
+ 'invalid preference key or size':'El ajuste no es válido o es demasiado grande.',
+ 'invalid language preference':'El idioma guardado no es válido.',
+ 'invalid setup preference':'El estado de configuración guardado no es válido.',
+ 'invalid preference JSON':'Los ajustes guardados contienen JSON inválido',
+ 'invalid favorites':'Los favoritos guardados no son válidos.',
+ 'invalid controller registry':'El registro de mandos guardado no es válido.',
+ 'invalid preference object':'Los ajustes guardados no son válidos.',
+ 'credentials must use the secure vault':'Las credenciales deben guardarse en el almacén seguro.',
  'Steam installation unavailable or invalid':'Instalación de Steam no disponible o inválida',
  'avatar cache file is too large':'El archivo de imagen de perfil es demasiado grande',
  'unterminated VDF string':'Cadena VDF sin terminar',

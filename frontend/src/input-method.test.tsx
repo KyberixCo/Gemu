@@ -6,6 +6,16 @@ import {ActionHint} from './ActionHint';
 import {LocalizationProvider} from './localization';
 import {ControllerMapper} from './features/management/ControllerMapper';
 afterEach(()=>{recordInput('keyboard');vi.unstubAllGlobals();});
+it('labels library shortcuts by physical button position',()=>{
+ expect(gamepadHint('xbox','view')).toBe('View');expect(gamepadHint('ps5','view')).toBe('Create');
+ expect(gamepadHint('ps4','view')).toBe('Share');expect(gamepadHint('switch','view')).toBe('−');
+ expect(gamepadHint('xbox','favorite')).toBe('X');expect(gamepadHint('xbox','details')).toBe('Y');
+ expect(gamepadHint('switch','favorite')).toBe('Y');expect(gamepadHint('switch','details')).toBe('X');
+ expect(gamepadHint('ps5','favorite')).toBe('□');expect(gamepadHint('ps5','details')).toBe('△');
+ recordInput('keyboard');
+ const markup=renderToStaticMarkup(<LocalizationProvider><ActionHint action="favorite"/><ActionHint action="details"/></LocalizationProvider>);
+ expect(markup).toContain('<kbd>F</kbd>');expect(markup).toContain('<kbd>I</kbd>');
+});
 it('keeps keyboard/mouse active with an idle connected controller',()=>{
  recordInput('gamepad','Xbox Controller',1);expect(inputMethod().family).toBe('xbox');
  recordInput('mouse');reconcileInput([{index:1,connected:true}]);expect(inputMethod().kind).toBe('mouse');

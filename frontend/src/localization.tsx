@@ -1,9 +1,16 @@
+import {preferencesStorage} from './persistence';
+import {retroarchEnglish} from './retroarch-copy';
 import {createContext,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
 import {translateHostMessage} from './host-messages';
 
 export type Language='es'|'en';
 const STORAGE_KEY='gemu.language.v1';
 const english:Record<string,string>={
+ 'Asistencia de escritorio':'Desktop assistance',
+ 'Usar ratón y teclado en el juego o su ventana de inicio.':'Use mouse and keyboard in the game or its launcher.',
+ 'Reinicia Gemu para usar la asistencia de escritorio.':'Restart Gemu to use desktop assistance.',
+ 'Este juego no está instalado.':'This game is not installed.',
+ ...retroarchEnglish,
  'Teclado virtual':'Virtual keyboard','Ratón virtual':'Virtual mouse','R3 · Ratón virtual':'R3 · Virtual mouse',
  'Listo':'Done','Borrar':'Delete','Salir':'Exit',
  'Stick izquierdo: mover · Stick derecho: desplazar':'Left stick: move · Right stick: scroll',
@@ -265,15 +272,16 @@ export function resolveLanguage(stored:string|null,languages:readonly string[]):
 }
 function initialLanguage():Language {
  let stored:string|null=null;
- try{stored=localStorage.getItem(STORAGE_KEY);}catch{}
+ try{stored=preferencesStorage.getItem(STORAGE_KEY);}catch{}
  return resolveLanguage(stored,typeof navigator==='undefined'?[]:navigator.languages?.length?navigator.languages:[navigator.language]);
 }
 export function LocalizationProvider({children}:{children:ReactNode}){
  const [language,setLanguageState]=useState<Language>(initialLanguage);
- const setLanguage=(next:Language)=>{setLanguageState(next);try{localStorage.setItem(STORAGE_KEY,next);}catch{}};
+ const [saveError,setSaveError]=useState('');
+ const setLanguage=(next:Language)=>{setLanguageState(next);setSaveError('');void preferencesStorage.setItem(STORAGE_KEY,next).catch(()=>setSaveError('No se pudieron guardar tus preferencias.'));};
  useEffect(()=>{document.documentElement.lang=language;document.documentElement.dir='ltr';},[language]);
  const value=useMemo(()=>({language,setLanguage,t:(text:string,values?:TranslationValues)=>translate(text,language,values)}),[language]);
- return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+ return <LanguageContext.Provider value={value}>{children}{saveError&&<p className="toast" role="alert">{translate(saveError,language)}</p>}</LanguageContext.Provider>;
 }
 export function useLocalization(){
  const value=useContext(LanguageContext);

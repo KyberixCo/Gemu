@@ -1,6 +1,6 @@
 # Importación de bibliotecas
 
-El proceso común a las fuentes vive en `internal/library`. Steam es el primer adaptador; el asistente `SourceWizard` y el catálogo principal consumen el contrato común, sin consultar APIs de Steam directamente.
+El proceso común a las fuentes vive en `internal/library`. Steam utiliza `SourceWizard`; RetroArch ofrece un [asistente especializado de instalación y configuración](retroarch.md), además de implementar el contrato de fuente para bibliotecas ya configuradas. Ambos publican en el mismo catálogo y conservan otras fuentes.
 
 ScreenScraper y SteamGridDB enriquecen este proceso según la activación y prioridad configuradas. `ContentProvider` define consulta, comprobación de acceso y hosts de arte; `Request.contentProviders` contiene opciones y credenciales temporales. `Metadata.artworks` conserva la galería local y procedencia por imagen. El escenario usa únicamente sus fondos y mantiene compatibilidad con las bibliotecas anteriores. Uso, calidad y límites en [Integraciones de contenido](content-providers.md).
 
@@ -11,7 +11,7 @@ ScreenScraper y SteamGridDB enriquecen este proceso según la activación y prio
 3. **Metadatos, arte y logros:** preparar una importación con descripción, géneros, portada y fondo. Cuando hay clave y perfil, consultar primero la API; el perfil local y los datos anteriormente guardados sirven de respaldo. Un logro desconocido no se marca como bloqueado.
 4. **Biblioteca:** revisar y finalizar. El backend publica la importación y la pantalla principal recibe el nuevo catálogo. Cancelar descarta el borrador; finalizar es la única operación que modifica la biblioteca publicada.
 
-La pantalla principal ofrece un cambio explícito entre **Mis juegos** y **Demo**. Las fichas reales muestran instalación, perfil y estado de sincronización de logros. La sección Metadatos usa el catálogo seleccionado. El lanzamiento todavía está pendiente.
+La pantalla principal ofrece un cambio explícito entre **Mis juegos** y **Demo**. Las fichas reales muestran instalación y los datos disponibles del jugador; RetroArch no sincroniza logros en este incremento. La sección Metadatos usa el catálogo seleccionado. El lanzamiento Steam y RetroArch está disponible en Windows.
 
 ## Contratos y persistencia
 
@@ -19,7 +19,7 @@ La pantalla principal ofrece un cambio explícito entre **Mis juegos** y **Demo*
 
 Wails expone `PreviewSource`, `PrepareLibraryImport`, `CommitLibraryImport`, `DiscardLibraryImport` y `GetLibrary`. Los borradores tienen tokens de un solo uso, expiran tras 15 minutos y no contienen credenciales. Reimportar reemplaza los títulos de esa fuente sin borrar otras fuentes. Los logros pertenecen al perfil seleccionado; la caché de otro perfil no se reutiliza. El [gestor seguro](credentials.md) permite conservar claves cifradas por perfil; Go las resuelve al iniciar la consulta, dando prioridad a los valores temporales no vacíos.
 
-El catálogo se guarda bajo `%APPDATA%/Gemu/library.json` en Windows, mediante archivo temporal, sincronización y reemplazo. Este primer almacenamiento usa JSON versionado; SQLite sigue pendiente. Las imágenes se guardan en la carpeta `art` y se sirven mediante `/library-assets/`, también durante desarrollo. Se validan HTTPS, hosts declarados por el adaptador, redirecciones, tamaño y formato de imagen. Los fallos de red conservan los metadatos y logros anteriormente publicados cuando corresponde.
+El catálogo se guarda en `%APPDATA%/Gemu/gemu.sqlite3` en Windows, con aislamiento por jugador y publicación transaccional de juegos, instalaciones, fuentes y deshacer de arte. Los JSON anteriores se migran una sola vez y se conservan como respaldo. Las imágenes se guardan en la carpeta compartida `art` y se sirven mediante `/library-assets/`, también durante desarrollo. Se validan HTTPS, hosts declarados por el adaptador, redirecciones, tamaño y formato de imagen. Los fallos de red conservan los metadatos y logros anteriormente publicados cuando corresponde. Detalles en [Persistencia](persistence.md).
 
 ## Adaptador Steam
 

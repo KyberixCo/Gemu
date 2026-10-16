@@ -5,6 +5,7 @@ import (
 	"kyberix.com/gemu/internal/library"
 	"kyberix.com/gemu/internal/profiles"
 	"kyberix.com/gemu/internal/providers/steam"
+	"kyberix.com/gemu/internal/retroarch"
 	"log"
 	"os"
 	"path/filepath"
@@ -26,9 +27,10 @@ func main() {
 	if dir == "" {
 		dir = filepath.Join(configDir, "Gemu")
 	}
-	sources := map[string]library.Source{"steam": steam.NewProvider()}
+	retro := retroarch.New(dir)
+	sources := map[string]library.Source{"steam": steam.NewProvider(), "retroarch": retroarch.NewSource(retro, "")}
 	service := library.New(dir, sources)
-	app := &App{profiles: profiles.New(dir), sources: sources, dir: dir}
+	app := &App{profiles: profiles.New(dir), sources: sources, dir: dir, retro: retro}
 	if err := wails.Run(&options.App{
 		Title:      "Gemu",
 		Fullscreen: true,

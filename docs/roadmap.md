@@ -1,15 +1,22 @@
 # Sprint siguiente · Console Core
 
+El menú durante la partida se mantiene como una ventana externa de Gemu. El trabajo previsto se centra en validar lanzamiento, atajos, recuperación del foco y retorno a la biblioteca. Alcance en [Menú de partida](game-menu.md).
+
+El listado refleja el alcance actual. Las secciones fechadas e incrementos posteriores conservan el historial; las referencias a JSON o SQLite pendiente en ese historial describen su estado anterior.
+
 Primer incremento completado: identidad visual, prototipo navegable, catálogo demo, favoritos, búsqueda, núcleo de lectura Steam y preparación de URI con validación.
 
 1. Host Wails v2.16.0 y binding de consulta Steam implementados. Proceso genérico conectado al catálogo principal, con demo como modo explícito. Pendiente validar visualmente en Windows.
-2. SQLite con migraciones: juegos, instalaciones, favoritos y ajustes. Probar escritura atómica y recuperación tras cierre.
+2. SQLite con migraciones implementado: perfiles, juegos, instalaciones, favoritos y ajustes por jugador. Migración desde JSON y WebView, transacciones y recuperación tras interrupción de proceso verificadas. Pendiente recorrido nativo de migración con WebView2 y mando. Detalles en [Persistencia](persistence.md).
+
+   La búsqueda de biblioteca ya usa FTS5 para título, descripción y género, con ranking, filtros y paginación. [Uso y contratos](search.md).
 3. Detección Steam por registro y rutas convencionales implementada; consulta real desde Gestión → Juegos → Steam. Pendiente importar ejecutables con validación backend.
 4. Implementar máquina de estados: idle, preparing, launch requested, running, restoring, error. No inferir una sesión real a partir de la apertura del cliente.
 5. XInput con acciones semánticas, repetición y desconexión. Pausar input mientras el juego esté activo.
 6. Validar en Windows el ciclo Steam → juego → Gemu, recuperación del foco y conservación de la selección. Pruebas físicas con TV, mando, Alt+Tab y cliente sin sesión iniciada.
+7. RetroArch: detección, instalación portable, núcleos, configuración por jugador, importación y lanzamiento implementados. Validación del paquete oficial completada; pendiente emulación y mando reales. [Recorrido y alcance](retroarch.md).
 
-Criterio de salida: seleccionar y abrir un juego instalado con mando, confirmar su ejecución cuando la evidencia lo permita y regresar con selección y favoritos conservados. Epic, emuladores y modo shell quedan fuera de este sprint.
+Criterio de salida: seleccionar y abrir un juego instalado con mando, confirmar su ejecución cuando la evidencia lo permita y regresar con selección y favoritos conservados. Epic y modo shell quedan fuera de este sprint. RetroArch se incorporó posteriormente mediante su asistente específico; los demás emuladores siguen pendientes.
 
 ## Trabajo de movimiento y sonido
 
@@ -142,3 +149,23 @@ Verificadas recuperación de archivo residual, exclusión de builds concurrentes
 Corregido HTTP 400 en logos e iconos: se enviaba `image/jpeg` como filtro común para todas las categorías, aunque esas dos no lo admiten. Se solicita PNG para logos/icons y se mantiene PNG/JPEG para grids/heroes. La prueba del adaptador reproduce el rechazo HTTP 400 de los filtros inválidos y exige recibir las cuatro categorías sin incidencias.
 
 Verificación: pruebas de proveedores/contenido y biblioteca, y `go vet` de ambos paquetes correctos. No se modifican credenciales ni se necesita volver a configurar la conexión. Repite la búsqueda de imágenes después de cargar el host actualizado.
+
+## Persistencia SQLite y migración · 15 de octubre de 2026
+
+Implementada una base `gemu.sqlite3` por entorno para perfiles, biblioteca, instalaciones, favoritos y ajustes, con aislamiento por jugador. Migraciones de esquema numeradas, importación única de JSON y preferencias del WebView, conservación de los orígenes como respaldo, transacciones, WAL, sincronización FULL y control de revisiones del catálogo. Credenciales cifradas y caché de arte conservan sus almacenes específicos. Detalles y recuperación en [Persistencia](persistence.md).
+
+Verificación: pruebas Go, 191 pruebas frontend, TypeScript, bundle de producción y build Wails correctos. Probados reintentos de migración inválida, aislamiento por jugador/entorno, conflictos de escritura, deshacer de arte y recuperación tras terminar un subproceso con una transacción sin confirmar. `go vet` de la aplicación y los paquetes modificados correcto; la revisión global conserva advertencias existentes de `unsafe.Pointer` en el código experimental de menú integrado. Pendiente recorrido nativo de migración con WebView2 y mando físico. FTS5 queda para la búsqueda avanzada.
+
+## Búsqueda de biblioteca con FTS5 · 15 de octubre de 2026
+
+Implementada la migración 2 con comprobación CREATE/INSERT/MATCH, indexación de juegos existentes y triggers transaccionales. El buscador consulta título, descripción y género, admite frases y prefijos, ignora acentos y ordena por relevancia. Aplica fuente y favoritos antes de paginar y conserva el propietario explícito de cada consulta. La interfaz descarta respuestas tardías, muestra errores con reintento y permite cargar más resultados. Las notas de fuentes/emuladores y la conexión del asistente siguen pendientes. Detalles en [Búsqueda de biblioteca](search.md).
+
+Verificación: suite Go, 196 pruebas frontend, TypeScript, bundle y build Wails correctos; `go vet` de la aplicación, almacenamiento y biblioteca correcto. Pruebas de migración desde esquema 1, rollback y reintento, actualización/borrado/reconstrucción del índice, acentos, frases, ranking, límites, filtros e aislamiento por jugador. Pendiente revisión visual en WebView2 y con mando físico; no se afirma calibración de rendimiento con bibliotecas grandes.
+
+## RetroArch: instalación y configuración asistidas · 15 de octubre de 2026
+
+Implementado el asistente desde Gestión → Juegos → RetroArch, también disponible en Emuladores y en la configuración inicial. Detecta instalaciones existentes y ofrece descargar una copia portátil oficial cuando falta. Permite elegir diez sistemas, instalar los núcleos necesarios con progreso y cancelación, asignar carpetas de ROMs y BIOS, revisar requisitos y juegos y confirmar la incorporación. No distribuye ROMs ni BIOS.
+
+La migración SQLite 3 guarda configuración y catálogo en una transacción junto con el índice FTS5. Los lanzamientos usan el núcleo correspondiente, configuración propia del jugador y partidas separadas por juego. La sesión sigue el proceso iniciado y restaura Gemu al terminar. Se preservan las instalaciones externas. Detalles, formatos, recuperación y límites en [RetroArch](retroarch.md).
+
+Verificación: suite Go completa, 203 pruebas frontend, TypeScript, bundle y compilación Wails de Gemu.exe correctos; `go vet` de la aplicación y los paquetes modificados correcto. La prueba real descargó y extrajo RetroArch oficial 1.22.2 y FCEUmm en un directorio temporal, validó ejecutable y núcleo y terminó correctamente. Pendiente recorrido gráfico con ROMs, BIOS y mando físico en Windows/WebView2; tampoco se integra todavía el mapeo de sistemas retro de ScreenScraper.

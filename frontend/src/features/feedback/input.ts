@@ -3,7 +3,7 @@ export class GamepadRepeater {
  private held = '';
  private last = 0;
  accept(action: string, now: number) {
-  const next = Boolean(action) && (action !== this.held || (now - this.last > 240 && action !== 'confirm' && action !== 'back' && action !== 'menu'));
+  const next = Boolean(action) && (action !== this.held || (now - this.last > 240 && ['up','down','left','right'].includes(action)));
   this.held = action;
   if (next) this.last = now;
   return next;

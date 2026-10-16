@@ -1,4 +1,22 @@
 export type TextEdit={value:string;caret:number};
+// Only buttons gate hotkey readiness. Extra axes (for example trigger axes
+// resting at -1) must not prevent R3 from becoming available.
+export class VirtualInputHotkeys{
+ private ready=false;
+ private previous=new Set<number>();
+ private chord=false;
+ reset(){this.ready=false;this.previous.clear();this.chord=false;}
+ sample(buttons:ReadonlySet<number>){
+  const previous=this.previous;
+  const pressed=(index:number)=>buttons.has(index)&&!previous.has(index);
+  this.previous=new Set(buttons);
+  if(!this.ready){if(!buttons.size)this.ready=true;return {ready:false,keyboard:false,pointer:false,suppress:true,pressed};}
+  if(!buttons.has(16)&&!buttons.has(2))this.chord=false;
+  const keyboard=!this.chord&&buttons.has(16)&&buttons.has(2);
+  if(keyboard)this.chord=true;
+  return {ready:true,keyboard,pointer:pressed(11)&&!buttons.has(16)&&!this.chord,suppress:buttons.has(16)||this.chord,pressed};
+ }
+}
 export function editText(value:string,start:number,end:number,text:string,maxLength=-1):TextEdit{
  const available=maxLength<0?Infinity:Math.max(0,maxLength-(value.length-(end-start)));
  const insertion=Array.from(text).reduce((result,char)=>result.length+char.length<=available?result+char:result,'');

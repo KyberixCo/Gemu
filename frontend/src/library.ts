@@ -12,7 +12,7 @@ export type CredentialStorage={name:string;available:boolean};
 export type CredentialStatus={provider:CredentialProvider;savedFields:string[];storage:CredentialStorage};
 export type PlayerState={profile:Profile;status:string;message:string;achievements:Achievement[]};
 export type InstalledGame={ID:string;Title:string;Installations:{Provider:string;ExternalID:string;Path:string;Installed:boolean}[]};
-export type Entry={game:InstalledGame;sourceId:string;metadata:{description:string;genres:string[];cover:string;background:string;origin:string;status:string;logo?:string;icon?:string;backgrounds?:string[];manualArt?:string[];artworks?:LibraryArtwork[]};player:PlayerState};
+export type Entry={game:InstalledGame;sourceId:string;metadata:{platform?:string;description:string;genres:string[];cover:string;background:string;origin:string;status:string;logo?:string;icon?:string;backgrounds?:string[];manualArt?:string[];artworks?:LibraryArtwork[]};player:PlayerState};
 export type SourceConfig={id:string;name?:string;root:string;profileId:string};
 export type Snapshot={version:number;sources:SourceConfig[];games:Entry[];artworkUndo?:unknown};
 export type Preview={root:string;games:InstalledGame[];profiles:Profile[];diagnostics:string[]};
@@ -53,7 +53,7 @@ export function catalogFromLibrary(snapshot:Snapshot,language:Language='es'):Gam
   // The selected cover can also be scenery when its actual dimensions qualify.
   const cover=entry.metadata.artworks?.find(a=>a.url===entry.metadata.cover&&isBackgroundSize(a.width,a.height));
   if(cover&&!art.some(a=>a.src===cover.url))art.push({id:'scenery-cover',type:'image' as const,src:cover.url});
-  return {id:entry.game.ID,title:entry.game.Title,provider:snapshot.sources.find(source=>source.id===entry.sourceId)?.name||entry.sourceId,genre:entry.metadata.genres?.join(' · ')||translate('Sin clasificar',language),subtitle:entry.player.profile.name?`${translate('Perfil',language)} · ${entry.player.profile.name}`:translate('Biblioteca instalada',language),description:entry.metadata.description||translate('Metadatos pendientes de obtener.',language),color:'#627f91',symbol:'◉',platform:'PC',installed:entry.game.Installations.some(i=>i.Installed),player:entry.player,cover:entry.metadata.cover,logo:entry.metadata.logo,logoManuallySelected:entry.metadata.manualArt?.includes('logo')??false,icon:entry.metadata.icon,artworks:art.length?art:undefined};
+  return {id:entry.game.ID,title:entry.game.Title,provider:snapshot.sources.find(source=>source.id===entry.sourceId)?.name||entry.sourceId,genre:entry.metadata.genres?.join(' · ')||translate('Sin clasificar',language),subtitle:entry.player.profile.name?`${translate('Perfil',language)} · ${entry.player.profile.name}`:translate('Biblioteca instalada',language),description:entry.metadata.description||translate('Metadatos pendientes de obtener.',language),color:'#627f91',symbol:'◉',platform:entry.sourceId==='retroarch'?(entry.metadata.platform??'Retro'): 'PC',emulated:entry.sourceId==='retroarch',installed:entry.game.Installations.some(i=>i.Installed),player:entry.player,cover:entry.metadata.cover,logo:entry.metadata.logo,logoManuallySelected:entry.metadata.manualArt?.includes('logo')??false,icon:entry.metadata.icon,artworks:art.length?art:undefined};
  });
 }
 

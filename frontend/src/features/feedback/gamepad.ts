@@ -5,7 +5,7 @@ import {controllerAssociations} from '../controllers/registry';
 import {isForeground,subscribeActivity} from '../../activity';
 import {recordInput,reconcileInput} from '../../input-method';
 
-export type GamepadAction='confirm'|'back'|'menu'|'up'|'down'|'left'|'right'|'';
+export type GamepadAction='confirm'|'back'|'menu'|'favorite'|'details'|'up'|'down'|'left'|'right'|'';
 export const buttonControls:readonly Control[]=['south','east','west','north','lb','rb','lt','rt','select','start','ls','rs','up','down','left','right'];
 export function pressedControls(pad:Gamepad):Control[]{
  return pad.mapping==='standard'?buttonControls.filter((_,index)=>pad.buttons[index]?.pressed):[];
@@ -13,9 +13,12 @@ export function pressedControls(pad:Gamepad):Control[]{
 export function gamepadAction(pad:Gamepad|null):GamepadAction{
  if(!pad||pad.mapping!=='standard')return '';
  if(pad.buttons[16]?.pressed)return 'menu';
+ if(pad.buttons[8]?.pressed&&pad.buttons[9]?.pressed)return 'menu';
  const pressed=pressedControls(pad);
  if(pressed.includes('south'))return 'confirm';
  if(pressed.includes('east'))return 'back';
+ if(pressed.includes('west'))return 'favorite';
+ if(pressed.includes('north'))return 'details';
  for(const direction of ['up','down','left','right'] as const)if(pressed.includes(direction))return direction;
  const x=Number.isFinite(pad.axes[0])?pad.axes[0]:0,y=Number.isFinite(pad.axes[1])?pad.axes[1]:0;
  if(Math.max(Math.abs(x),Math.abs(y))<0.5)return '';
@@ -35,7 +38,7 @@ export class GamepadInput{
   return {pad,action:this.repeater.accept(next,now)?next:'' as GamepadAction};
  }
 }
-type Listener={action?:(action:GamepadAction)=>void;snapshot?:(pad:Gamepad|null)=>void;devices?:(pads:readonly Gamepad[],active:Gamepad|null)=>void;capture?:()=>boolean;priority?:number};
+type Listener={action?:(action:GamepadAction)=>void;libraryActions?:boolean;snapshot?:(pad:Gamepad|null)=>void;devices?:(pads:readonly Gamepad[],active:Gamepad|null)=>void;capture?:()=>boolean;priority?:number};
 const listeners:Listener[]=[];
 const input=new GamepadInput();
 let frame=0;
@@ -74,7 +77,8 @@ function poll(now:number){
   listener.devices?.(pads.filter((device):device is Gamepad=>!!device?.connected),active?pad:null);
  }
  const capture=listeners.filter(listener=>listener.capture?.()).sort((a,b)=>(b.priority??0)-(a.priority??0))[0];
- if(action&&(action!=='menu'||capture))(capture??listeners.filter(listener=>listener.action&&!listener.capture).at(-1))?.action?.(action);
+ const recipient=capture??listeners.filter(listener=>listener.action&&!listener.capture).at(-1);
+ if(action&&(action!=='menu'||capture)&&(!['favorite','details'].includes(action)||recipient?.libraryActions))recipient?.action?.(action);
  if(listeners.length&&isForeground())frame=requestAnimationFrame(poll);
 }
 export function subscribeGamepad(listener:Listener){

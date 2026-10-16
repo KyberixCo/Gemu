@@ -2,6 +2,8 @@
 
 Gemu distingue el perfil local de jugador de la cuenta de una fuente como Steam. Cada perfil local tiene su biblioteca publicada, asociaciones a fuentes, logros, favoritos, ajustes de sonido y movimiento, y configuración de gestión. Las instalaciones físicas y la caché de imágenes se pueden compartir; los datos del jugador no.
 
+RetroArch comparte únicamente ejecutables y núcleos administrados dentro del entorno. Su configuración, partidas, estados y registros quedan en el espacio del jugador; elegir una colección no cambia la del resto de perfiles. Una operación pendiente conserva su propietario explícito al cambiar de jugador.
+
 ## Arranque
 
 - Sin perfiles: asistente de dos pasos que lista las cuentas Steam locales, si se pueden detectar. Elegir una sugiere su nombre y avatar en caché; el nombre se puede editar y también se puede crear un perfil manualmente. Crear el perfil lo guarda antes de entrar a la consola.
@@ -15,7 +17,7 @@ El asistente solo lee los nombres de `loginusers.vdf` y avatares locales en cach
 
 ## Persistencia
 
-Se mantiene el almacenamiento JSON atómico existente; esta entrega no incorpora SQLite. El directorio de datos contiene `profiles.json`, `profiles/<id>/library.json` y la caché compartida `art/`. Las preferencias del frontend usan claves `gemu.profile.<id>.*` de localStorage. Los IDs son aleatorios y el backend solo acepta IDs presentes en el registro.
+El directorio de datos contiene una base `gemu.sqlite3` compartida por los perfiles del mismo entorno, con filas separadas por jugador, y la caché compartida `art/`. Los IDs son aleatorios y el backend solo acepta IDs presentes en el registro. Los JSON anteriores y las claves `gemu.profile.<id>.*` del WebView se importan una sola vez y se conservan como respaldo. Biblioteca, favoritos y ajustes del escritorio se guardan desde entonces en SQLite. Migraciones, recuperación y alcance en [Persistencia](persistence.md).
 
 La biblioteca global anterior y sus ajustes se conservan, pero no se asignan automáticamente a un jugador porque no conocemos su propietario. Es necesario importar Steam en cada perfil nuevo.
 

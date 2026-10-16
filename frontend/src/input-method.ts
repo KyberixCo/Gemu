@@ -24,7 +24,10 @@ function watch(){
 }
 function subscribe(listener:()=>void){listeners.add(listener);if(listeners.size===1)stopWatching=watch();return()=>{listeners.delete(listener);if(!listeners.size){stopWatching?.();stopWatching=undefined;}};}
 export function useInputMethod(){return useSyncExternalStore(subscribe,inputMethod,inputMethod);}
-export function gamepadHint(family:Family|null,action:'confirm'|'back'|'navigate'){
+export function gamepadHint(family:Family|null,action:'confirm'|'back'|'navigate'|'favorite'|'details'|'view'){
+ if(action==='view')return family==='xbox'?'View':family==='ps5'?'Create':family==='ps4'?'Share':family==='switch'?'−':'Select';
+ if(action==='favorite')return !family?'◧':family==='switch'?'Y':family==='xbox'?'X':'□';
+ if(action==='details')return !family?'△':family==='switch'?'X':family==='xbox'?'Y':'△';
  if(action==='navigate')return '✚';
  if(!family)return action==='confirm'?'●':'○';
  return family==='switch'?(action==='confirm'?'B':'A'):family==='xbox'?(action==='confirm'?'A':'B'):(action==='confirm'?'×':'○');

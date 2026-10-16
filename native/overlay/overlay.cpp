@@ -101,11 +101,11 @@ static void drawMenu(){
  draw->AddLine({gutter,85*scale},{io.DisplaySize.x-gutter,85*scale},IM_COL32(255,255,255,25));
  draw->AddText(font,30*scale,{gutter,125*scale},paper,confirmation?text("¿Cerrar el juego?","Close the game?"):text("Tu partida","Your game"));
  if(confirmation)draw->AddText(font,15*scale,{gutter,176*scale},IM_COL32(255,208,182,255),text("El progreso sin guardar puede perderse.","Unsaved progress may be lost."));
- int count=confirmation?2:3;bool accept=false,back=false;navigation(accept,back,count);
+ int count=confirmation?2:4;bool accept=false,back=false;navigation(accept,back,count);
  if(back){if(confirmation){confirmation=false;selected=2;}else send(1);}
  float startY=(confirmation?220:195)*scale;
- const char* labels[]={text("Continuar jugando","Resume game"),text("Volver a Gemu","Return to Gemu"),text("Cerrar juego","Close game")};
- const char* descriptions[]={text("Regresar directamente al juego.","Go straight back to the game."),text("Explorar la biblioteca sin cerrar el juego.","Browse the library while the game keeps running."),text("Terminar la partida.","End this game session.")};
+ const char* labels[]={text("Continuar jugando","Resume game"),text("Volver a Gemu","Return to Gemu"),text("Cerrar juego","Close game"),text("Asistencia de escritorio","Desktop assistance")};
+ const char* descriptions[]={text("Regresar directamente al juego.","Go straight back to the game."),text("Explorar la biblioteca sin cerrar el juego.","Browse the library while the game keeps running."),text("Terminar la partida.","End this game session."),text("Ratón y teclado virtuales para otras ventanas.","Virtual mouse and keyboard for other windows.")};
  if(confirmation){labels[0]=text("Cancelar","Cancel");labels[1]=text("Confirmar cierre","Confirm close");descriptions[0]=text("Volver a las opciones de la partida.","Return to the game menu.");descriptions[1]=text("Solicitar el cierre del juego.","Request that the game closes.");}
  for(int i=0;i<count;i++){
   float y=startY+i*98*scale+(i==2?14*scale:0);
@@ -122,7 +122,7 @@ static void drawMenu(){
   draw->AddText(font,13*scale,{gutter+24*scale,y+49*scale},i==0?IM_COL32(52,64,20,255):muted,descriptions[i]);
   if(enabled&&(clicked||(accept&&focused))){
    if(confirmation){if(i==0){confirmation=false;selected=2;}else send(3);}
-   else if(i==0)send(1);else if(i==1)send(2);else{confirmation=true;selected=0;}
+   else if(i==0)send(1);else if(i==1)send(2);else if(i==3)send(4);else{confirmation=true;selected=0;}
    ImGui::PopID();break;
   }
   ImGui::PopID();

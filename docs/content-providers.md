@@ -1,5 +1,7 @@
 # ScreenScraper y SteamGridDB
 
+RetroArch importa inicialmente metadatos locales. SteamGridDB puede buscar su arte por título desde el flujo existente. ScreenScraper rechaza consultas retro hasta implementar su mapeo de consolas, para evitar asignar a una ROM una coincidencia de PC Windows.
+
 Las integraciones amplían los metadatos y el arte durante el asistente de importación. No son fuentes de instalaciones: Steam sigue proporcionando los juegos, el perfil y los logros. Las consultas pasan por Go; el frontend no envía credenciales directamente a las APIs.
 
 ## Uso

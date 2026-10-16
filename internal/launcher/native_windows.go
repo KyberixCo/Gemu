@@ -5,8 +5,10 @@ package launcher
 import (
 	"fmt"
 	"golang.org/x/sys/windows"
+	"kyberix.com/gemu/internal/assist"
 	"log"
 	"os"
+	"os/exec"
 	"syscall"
 	"time"
 	"unsafe"
@@ -58,8 +60,8 @@ type native struct {
 func Native() Platform {
 	dll := windows.NewLazySystemDLL("xinput1_4.dll")
 	n := &native{state: dll.NewProc("XInputGetState")}
-	// Optional compatibility path also used by Chromium: Guide is absent from
-	// the public XInputGetState API. Always retain the documented fallback.
+	// Guide is available through this optional extension, not public XInput.
+	// Keep View + Menu when the extension is unavailable.
 	if dll.Load() == nil {
 		n.extended, _ = windows.GetProcAddressByOrdinal(windows.Handle(dll.Handle()), 100)
 	}
@@ -142,6 +144,21 @@ func (*native) Open(uri string) error {
 		return err
 	}
 	return windows.ShellExecute(0, verb, file, nil, nil, 1)
+}
+
+func (*native) StartExecutable(path string, args []string, dir string) (Process, error) {
+	command := exec.Command(path, args...)
+	command.Dir = dir
+	command.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW}
+	if err := command.Start(); err != nil {
+		return Process{}, err
+	}
+	p, err := process(uint32(command.Process.Pid))
+	go command.Wait()
+	if err != nil {
+		return Process{}, fmt.Errorf("could not confirm the RetroArch process: %w", err)
+	}
+	return p, nil
 }
 func process(pid uint32) (Process, error) {
 	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
@@ -229,6 +246,7 @@ func (*native) Close(p Process) error {
 	return nil
 }
 func (n *native) Shortcut(active bool) bool {
+	brokerMenu, brokerHealthy := assist.MenuShortcut(active)
 	if active != n.hotKeyActive {
 		n.hotKeyActive = active
 		if active {
@@ -262,7 +280,7 @@ func (n *native) Shortcut(active bool) bool {
 		pressed, _, _ := key.Call(vkF10)
 		down = pressed&0x8000 != 0
 	}
-	if n.state.Find() == nil {
+	if !brokerHealthy && n.state.Find() == nil {
 		for slot := 0; slot < 4; slot++ {
 			if time.Now().Before(n.nextCheck[slot]) {
 				continue
@@ -274,7 +292,7 @@ func (n *native) Shortcut(active bool) bool {
 			} else {
 				status, _, _ = n.state.Call(uintptr(slot), uintptr(unsafe.Pointer(&state)))
 			}
-			if status == 0 && (state[1]&0x30 == 0x30 || state[1]&0x400 != 0) {
+			if status == 0 && controllerMenuShortcut(state[1]) {
 				down = true
 			}
 			if status != 0 {
@@ -284,5 +302,9 @@ func (n *native) Shortcut(active bool) bool {
 	}
 	edge := down && !n.held
 	n.held = down
-	return triggered || edge
+	return triggered || edge || brokerMenu
+}
+
+func controllerMenuShortcut(buttons uint32) bool {
+	return buttons&0x30 == 0x30 || buttons&0x400 != 0
 }

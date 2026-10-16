@@ -1,3 +1,4 @@
+import {preferencesStorage} from '../../persistence';
 import {profileKey} from '../../profiles';
 import {isForeground,subscribeActivity} from '../../activity';
 import { useEffect, useState } from 'react';
@@ -6,7 +7,7 @@ import { isReducedMotion, parsePreferences, type FeedbackPreferences } from './p
 const KEY = 'gemu.feedback';
 export function useFeedback(onError: (message:string) => void) {
  const [preferences,setPreferences] = useState<FeedbackPreferences>(() => {
-  try { return parsePreferences(localStorage.getItem(profileKey(KEY))); } catch { return parsePreferences(null); }
+  try { return parsePreferences(preferencesStorage.getItem(profileKey(KEY))); } catch { return parsePreferences(null); }
  });
  const [active,setActive] = useState(isForeground);
  const [systemReduced,setSystemReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -29,10 +30,10 @@ export function useFeedback(onError: (message:string) => void) {
    window.removeEventListener('pointerdown',unlock);window.removeEventListener('keydown',unlock);
   };
  },[]);
- const updatePreferences = (patch: Partial<FeedbackPreferences>) => {
+ const updatePreferences = async(patch: Partial<FeedbackPreferences>) => {
   const next = {...preferences,...patch};
   interfaceAudio.configure(next);setPreferences(next);
-  try { localStorage.setItem(profileKey(KEY),JSON.stringify(next)); } catch { onError('No se pudieron guardar tus preferencias.'); }
+  try { await preferencesStorage.setItem(profileKey(KEY),JSON.stringify(next)); } catch { onError('No se pudieron guardar tus preferencias.'); }
  };
  return {preferences,updatePreferences,active,reduced:isReducedMotion(preferences.motion,systemReduced)};
 }

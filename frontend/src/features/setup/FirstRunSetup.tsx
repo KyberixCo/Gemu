@@ -1,3 +1,5 @@
+import {RetroArchWizard} from '../management/RetroArchWizard';
+import {preferencesStorage} from '../../persistence';
 import {ActionHint} from '../../ActionHint';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {libraryHost,type SourceInfo,type Snapshot} from '../../library';
@@ -13,7 +15,7 @@ import type {ContentProviderId} from '../management/content-providers';
 import {ArtworkFlow} from '../management/ArtworkFlow';
 import {useLocalization} from '../../localization';
 
-export function FirstRunSetup({children}:{children:ReactNode}){
+export function FirstRunSetup({children,profileID}:{children:ReactNode;profileID:string}){
  const {t}=useLocalization();
  const [done,setDone]=useState(()=>setupComplete()),[loading,setLoading]=useState(!done);
  const [config,setConfig]=useState(loadManagementConfig),[sources,setSources]=useState<SourceInfo[]>([]),[library,setLibrary]=useState<Snapshot>({version:1,sources:[],games:[]});
@@ -30,15 +32,16 @@ export function FirstRunSetup({children}:{children:ReactNode}){
   catch(reason){if(id===loadSequence.current)setError(String(reason));}finally{if(id===loadSequence.current)setLoading(false);}
  };
  useEffect(()=>{if(!done)void load();const open=()=>{forced.current=true;setStep(0);setProvider(undefined);setSource(undefined);setValues({});setConfig(loadManagementConfig());setDone(false);void load();};window.addEventListener('gemu-open-setup',open);return()=>{loadSequence.current++;window.removeEventListener('gemu-open-setup',open);};},[]);
- const finish=()=>{
-  try{saveManagementConfig(config);localStorage.setItem(profileKey('gemu.setup.v1'),'complete');setDone(true);}
+ const finish=async()=>{
+  const setupKey=profileKey('gemu.setup.v1');
+  try{await saveManagementConfig(config);await preferencesStorage.setItem(setupKey,'complete');setDone(true);}
   catch{setError('No se pudo guardar la configuración. Puedes reintentar o entrar sin conservar las preferencias.');}
  };
  if(done)return <>{children}</>;
  const steps=['Tu consola','Arte y metadatos','Tus juegos','Revisión'];
  return <section className="setup-gate" ref={root} aria-label={t('Primera configuración de Gemu')}><div className="setup-panel management-tv">
  <header className="tv-header"><span className="brand">{"g"}<span>.</span></span><p className="eyebrow">{t('CONFIGURACIÓN INICIAL')}</p></header>
- <div className="tv-content">{loading?<p role="status">{t('Preparando tu configuración…')}</p>:improveArtwork?<ArtworkFlow bulk entries={library.games.filter(entry=>!entry.metadata.cover||!entry.metadata.background||!entry.metadata.logo||!entry.metadata.icon)} settings={config.contentProviders} credentials={{}} onSaved={snapshot=>{setLibrary(snapshot);setImproveArtwork(false);}} onClose={()=>setImproveArtwork(false)} onConfigure={()=>{setImproveArtwork(false);setStep(1);}}/>:provider?<ProviderSetupWizard key={provider} provider={provider} preferences initialEnabled={config.contentProviders[provider].enabled} initialPriority={config.contentProviders[provider].priority} values={values} onChange={setValues} onCancel={()=>{setProvider(undefined);setValues({});}} onComplete={result=>{setConfig(current=>({...current,contentProviders:{...current.contentProviders,[provider]:{enabled:result.enabled,priority:result.priority}}}));setProvider(undefined);setValues({});}}/>:source?<SourceWizard key={source.id} sourceId={source.id} name={source.name} enabled={library.sources.some(item=>item.id===source.id)} path={library.sources.find(item=>item.id===source.id)?.root??''} contentSettings={config.contentProviders} credentials={{}} onBusyChange={setSourceBusy} onComplete={snapshot=>{setLibrary(snapshot);setSource(undefined);setSourceBusy(false);setStep(3);}}/>:
+ <div className="tv-content">{loading?<p role="status">{t('Preparando tu configuración…')}</p>:improveArtwork?<ArtworkFlow bulk entries={library.games.filter(entry=>!entry.metadata.cover||!entry.metadata.background||!entry.metadata.logo||!entry.metadata.icon)} settings={config.contentProviders} credentials={{}} onSaved={snapshot=>{setLibrary(snapshot);setImproveArtwork(false);}} onClose={()=>setImproveArtwork(false)} onConfigure={()=>{setImproveArtwork(false);setStep(1);}}/>:provider?<ProviderSetupWizard key={provider} provider={provider} preferences initialEnabled={config.contentProviders[provider].enabled} initialPriority={config.contentProviders[provider].priority} values={values} onChange={setValues} onCancel={()=>{setProvider(undefined);setValues({});}} onComplete={result=>{setConfig(current=>({...current,contentProviders:{...current.contentProviders,[provider]:{enabled:result.enabled,priority:result.priority}}}));setProvider(undefined);setValues({});}}/>:source?source.id==='retroarch'?<RetroArchWizard profileID={profileID} onBusyChange={setSourceBusy} onSaved={snapshot=>{setLibrary(snapshot);setSource(undefined);setSourceBusy(false);setStep(3);}} onCancel={()=>setSource(undefined)}/>:<SourceWizard key={source.id} sourceId={source.id} name={source.name} enabled={library.sources.some(item=>item.id===source.id)} path={library.sources.find(item=>item.id===source.id)?.root??''} contentSettings={config.contentProviders} credentials={{}} onBusyChange={setSourceBusy} onComplete={snapshot=>{setLibrary(snapshot);setSource(undefined);setSourceBusy(false);setStep(3);}}/>:
  <WizardFrame title={t('Preparar Gemu')} steps={steps.map(text=>t(text))} current={step} actions={<><button data-nav className="manager-secondary" onClick={()=>step?setStep(step-1):finish()}>{t(step?'Atrás':'Configurar más tarde')}</button>{step<3?<button data-nav className="primary" onClick={()=>setStep(step+1)}>{t('Continuar')}</button>:<button data-nav className="primary" onClick={finish}>{t('Guardar y entrar en Gemu')}</button>}</>}>
  {step===0&&<><p>{t('Tu perfil ya está creado. Ahora puedes conectar el arte y traer tus juegos.')}</p><p>{t('Cada servicio tiene su propio asistente. Puedes dejar cualquier conexión pendiente y configurarla más tarde desde Gestión.')}</p></>}
  {step===1&&<><p>{t('Steam aporta el arte básico. Configura SteamGridDB para ampliarlo o ScreenScraper para obtener metadatos y arte.')}</p><div className="tv-setting-list">{(['steamgriddb','screenscraper'] as const).map(id=><button data-nav className="tv-row" key={id} onClick={()=>{setValues({});setProvider(id);}}><strong>{id==='steamgriddb'?"SteamGridDB":"ScreenScraper"}</strong><span>{t(config.contentProviders[id].enabled?'Configurado · revisar':'Abrir asistente')}</span></button>)}</div><p>{t('El acceso de aplicación a ScreenScraper lo proporciona Gemu. Solo necesitas configurar tu cuenta personal.')}</p></>}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"kyberix.com/gemu/internal/domain"
+	"kyberix.com/gemu/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -60,7 +61,10 @@ func TestGenericImportPublicationAndReimport(t *testing.T) {
 	if err != nil || len(snapshot.Games) != 2 || len(snapshot.Sources) != 2 {
 		t.Fatalf("snapshot=%+v err=%v", snapshot, err)
 	}
-	data, _ := os.ReadFile(filepath.Join(dir, "library.json"))
+	data, err := os.ReadFile(filepath.Join(dir, storage.Filename))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if strings.Contains(string(data), "secret-never-persist") {
 		t.Fatal("credential persisted")
 	}

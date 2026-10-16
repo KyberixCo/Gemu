@@ -1,6 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest';
-import {isForeground,isGameplay,setGameplay,subscribeActivity} from './activity';
-afterEach(()=>{setGameplay(false);vi.unstubAllGlobals();});
+import {isForeground,isGameplay,setAssisting,setGameplay,subscribeActivity} from './activity';
+afterEach(()=>{setGameplay(false);setAssisting(false);vi.unstubAllGlobals();});
 it('enters low power during gameplay and restores foreground activity',()=>{
  const document={hidden:false,hasFocus:()=>true,documentElement:{dataset:{} as Record<string,string>}};
  vi.stubGlobal('document',document);
@@ -11,4 +11,12 @@ it('enters low power during gameplay and restores foreground activity',()=>{
  setGameplay(false);expect(isForeground()).toBe(true);expect(changed).toHaveBeenCalledTimes(2);
  document.hidden=true;expect(isForeground()).toBe(false);
  unsubscribe();
+});
+it('pauses local controller navigation while desktop assistance owns input',()=>{
+ vi.stubGlobal('document',{hidden:false,hasFocus:()=>true});
+ const changed=vi.fn(),stop=subscribeActivity(changed);
+ setAssisting(true);expect(isForeground()).toBe(false);
+ setAssisting(true);expect(changed).toHaveBeenCalledTimes(1);
+ setAssisting(false);expect(isForeground()).toBe(true);expect(changed).toHaveBeenCalledTimes(2);
+ stop();
 });

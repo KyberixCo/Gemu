@@ -9,6 +9,19 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+func TestControllerMenuShortcutSupportsGuide(t *testing.T) {
+	for _, buttons := range []uint32{0, 0x10, 0x20, 0x4000} {
+		if controllerMenuShortcut(buttons) {
+			t.Errorf("buttons %#x must not open Gemu's menu", buttons)
+		}
+	}
+	for _, buttons := range []uint32{0x30, 0x400, 0x400 | 0x30} {
+		if !controllerMenuShortcut(buttons) {
+			t.Errorf("buttons %#x must open Gemu's menu", buttons)
+		}
+	}
+}
+
 func TestNativeHotKeyQueueAndRelease(t *testing.T) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()

@@ -86,3 +86,16 @@ func TestShutdownReleasesInjectedOverlay(t *testing.T) {
 		t.Fatal("overlay was not released")
 	}
 }
+
+func TestInjectedAssistanceHidesMenuWithoutChangingFocus(t *testing.T) {
+	s, p := overlaySession(t)
+	s.Menu()
+	p.command = 4
+	session, restore := s.Poll()
+	if session.Menu || p.visible || restore || p.focusCalls != 0 {
+		t.Fatal("assistance must leave the target window focused")
+	}
+	if !s.TakeAssistanceRequest() || s.TakeAssistanceRequest() {
+		t.Fatal("assistance request must be consumed exactly once")
+	}
+}

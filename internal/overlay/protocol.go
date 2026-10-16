@@ -11,6 +11,7 @@ const (
 	CommandResume
 	CommandHome
 	CommandClose
+	CommandAssist
 )
 
 // Shared is also defined in native/overlay/protocol.h. All mutable controls

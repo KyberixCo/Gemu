@@ -54,6 +54,9 @@ Las prioridades son una navegación rápida, consumo moderado de recursos, recup
 - [Gestión y contratos de integración](docs/management.md)
 - [Diseño del flujo de arte con mando](docs/artwork-flow.md)
 - [Guía de desarrollo](docs/development.md)
+- [Persistencia y migración a SQLite](docs/persistence.md)
+- [Búsqueda de biblioteca](docs/search.md)
+- [Instalar y configurar RetroArch](docs/retroarch.md)
 
 ## Licencia
 

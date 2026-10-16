@@ -169,6 +169,11 @@ func (p *ScreenScraper) Fetch(ctx context.Context, game domain.Game, credentials
 
 func (p *ScreenScraper) FetchLocalized(ctx context.Context, game domain.Game, credentials map[string]string, language string) (library.ContentResult, error) {
 	result := library.ContentResult{}
+	for _, installation := range game.Installations {
+		if installation.Provider == "retroarch" {
+			return result, fmt.Errorf("ScreenScraper retro system mapping is not available: %w", library.ErrContentUnavailable)
+		}
+	}
 	query, err := p.query(credentials)
 	if err != nil {
 		return result, err

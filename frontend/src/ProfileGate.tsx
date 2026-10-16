@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {hydratePreferences,preferencesStorage} from './persistence';
 import {libraryHost} from './library';
 import {setStorageProfile,startupAction,type GemuProfile,type ProfileHost,type SteamAccount} from './profiles';
 import {moveFocus} from './navigation';
@@ -16,9 +17,9 @@ export function ProfileGate({children}:{children:(profile:GemuProfile,manage:()=
  const [steamAccounts,setSteamAccounts]=useState<SteamAccount[]>([]),[selectedSteamAccount,setSelectedSteamAccount]=useState<SteamAccount>(),[steamAccountsLoading,setSteamAccountsLoading]=useState(false),[steamAccountsError,setSteamAccountsError]=useState('');
  const root=useRef<HTMLElement>(null);
  const host=()=>libraryHost() as ReturnType<typeof libraryHost>&ProfileHost;
- const enter=async(profile:GemuProfile)=>{setBusy(true);setError('');try{await host().SelectProfile(profile.id);setStorageProfile(profile.id);setActive(profile);setMode('active');}catch(e){setError(String(e));}finally{setBusy(false);}};
+ const enter=async(profile:GemuProfile)=>{setBusy(true);setError('');try{await host().SelectProfile(profile.id);await hydratePreferences(profile.id);setStorageProfile(profile.id);setActive(profile);setMode('active');}catch(e){setError(String(e));}finally{setBusy(false);}};
  useEffect(()=>{let cancelled=false;setMode('loading');setError('');
-  void (async()=>{try{const items=await host().GetProfiles();if(cancelled)return;setProfiles(items);const action=startupAction(items);if(action==='enter'){await host().SelectProfile(items[0].id);if(cancelled)return;setStorageProfile(items[0].id);setActive(items[0]);setMode('active');}else setMode(items.length?'select':'language');}catch(e){if(!cancelled){setError(String(e));setMode(profiles.length?'select':'language');}}})();
+  void (async()=>{try{const items=await host().GetProfiles();if(cancelled)return;setProfiles(items);const action=startupAction(items);if(action==='enter'){await host().SelectProfile(items[0].id);await hydratePreferences(items[0].id);if(cancelled)return;setStorageProfile(items[0].id);setActive(items[0]);setMode('active');}else setMode(items.length?'select':'language');}catch(e){if(!cancelled){setError(String(e));setMode(profiles.length?'select':'language');}}})();
   return()=>{cancelled=true;};
  },[attempt]);
  useEffect(()=>{if(mode!=='create')return;let cancelled=false;setSteamAccountsLoading(true);setSteamAccountsError('');
@@ -31,7 +32,7 @@ export function ProfileGate({children}:{children:(profile:GemuProfile,manage:()=
   const action=(name:string)=>{if(name==='confirm'){if(document.activeElement instanceof HTMLInputElement)root.current?.querySelector<HTMLButtonElement>('button.primary')?.click();else(document.activeElement as HTMLElement)?.click();}else if(name==='back'){if(mode==='create'&&step)setStep(0);else if(profiles.length)setMode('select');}else if(root.current)moveFocus(name as 'left',root.current);};
   const key=(e:KeyboardEvent)=>{const value=navigationKey(e);if(value==='Escape'){e.preventDefault();action('back');}else if(value==='Enter'||value===' '&&!(e.target instanceof HTMLInputElement)){e.preventDefault();if(!e.repeat)action('confirm');}else if(value.startsWith('Arrow')&&!(e.target instanceof HTMLInputElement)){e.preventDefault();action(value.slice(5).toLowerCase());}};
   let knownControllers:ReturnType<typeof readControllerRegistry>=[];
-  try{knownControllers=readControllerRegistry(JSON.parse(localStorage.getItem(controllerRegistryKey)||'[]'));}catch{/* No saved controller identities. */}
+  try{knownControllers=readControllerRegistry(JSON.parse(preferencesStorage.getItem(controllerRegistryKey)||'[]'));}catch{/* No saved controller identities. */}
   const unsubscribe=subscribeGamepad({action,snapshot:pad=>setSuggestedPlayer(pad?controllerAssociations.resolve(browserController(pad.index,pad.id),knownControllers)?.playerId??'':'')});
   window.addEventListener('keydown',key);return()=>{window.removeEventListener('keydown',key);unsubscribe();};
  },[mode,step,profiles]);

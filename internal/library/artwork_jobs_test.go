@@ -1,12 +1,21 @@
 package library
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"kyberix.com/gemu/internal/domain"
 	"reflect"
 	"testing"
 	"time"
 )
+
+// Revisions are concurrency tokens, not part of the published library data.
+func samePublishedSnapshot(a, b Snapshot) bool {
+	x, _ := json.Marshal(a)
+	y, _ := json.Marshal(b)
+	return bytes.Equal(x, y)
+}
 
 func waitArtwork(t *testing.T, s *Service, id string) ArtworkSearch {
 	t.Helper()
@@ -45,7 +54,7 @@ func TestArtworkCommitOnlyChangesSelectedArtAndUndoSurvivesRestart(t *testing.T)
 		t.Fatalf("proposal=%+v", view)
 	}
 	unpublished, _ := s.Load()
-	if !reflect.DeepEqual(unpublished, before) {
+	if !samePublishedSnapshot(unpublished, before) {
 		t.Fatal("search published changes")
 	}
 	if _, err = s.CommitArtwork(ArtworkCommit{ID: job.ID, Choices: []ArtworkChoice{{GameID: "one", IDs: []string{"forged"}}}}); err == nil {
@@ -62,7 +71,7 @@ func TestArtworkCommitOnlyChangesSelectedArtAndUndoSurvivesRestart(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(restored, before) {
+	if !samePublishedSnapshot(restored, before) {
 		t.Fatal("undo did not restore previous state")
 	}
 }
@@ -107,7 +116,7 @@ func TestArtworkCancellationStopsProviderAndDoesNotPublish(t *testing.T) {
 		t.Fatal("not cancelled")
 	}
 	snapshot, _ := s.Load()
-	if !reflect.DeepEqual(snapshot, before) {
+	if !samePublishedSnapshot(snapshot, before) {
 		t.Fatal("cancel published results")
 	}
 }
@@ -204,7 +213,7 @@ func TestArtworkIconsAreSelectablePersistentAndSurviveImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(restored, before) {
+	if !samePublishedSnapshot(restored, before) {
 		t.Fatal("icon undo failed")
 	}
 }

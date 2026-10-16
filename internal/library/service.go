@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"kyberix.com/gemu/internal/storage"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,11 +27,17 @@ type Service struct {
 	drafts  map[string]pending
 	content map[string]ContentProvider
 	artJobs map[string]*artworkJob
+	dbDir   string
+	scope   string
 }
 
 func New(dir string, sources map[string]Source) *Service {
-	return &Service{dir: dir, artDir: filepath.Join(dir, "art"), sources: sources, drafts: map[string]pending{}, artJobs: map[string]*artworkJob{}}
+	return &Service{dir: dir, dbDir: dir, scope: storage.Standalone, artDir: filepath.Join(dir, "art"), sources: sources, drafts: map[string]pending{}, artJobs: map[string]*artworkJob{}}
 }
+
+// WithPlayerStorage keeps every player's rows in the environment's database.
+// dir continues to identify the legacy library and credential directory.
+func (s *Service) WithPlayerStorage(root, id string) *Service { s.dbDir = root; s.scope = id; return s }
 
 // Share only downloaded artwork, never player data, across local profiles.
 func (s *Service) WithArtworkDirectory(dir string) *Service { s.artDir = dir; return s }
@@ -170,6 +177,14 @@ func (s *Service) Prepare(ctx context.Context, req Request) (Draft, error) {
 }
 func (s *Service) Discard(token string) { s.mu.Lock(); defer s.mu.Unlock(); delete(s.drafts, token) }
 func (s *Service) Load() (Snapshot, error) {
+	snapshot, err := s.loadSQLite()
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return s.normalize(snapshot), nil
+}
+
+func (s *Service) loadLegacy() (Snapshot, error) {
 	data, err := os.ReadFile(filepath.Join(s.dir, "library.json"))
 	if os.IsNotExist(err) {
 		return Snapshot{Version: 1, Sources: []SourceConfig{}, Games: []Entry{}}, nil
@@ -190,6 +205,10 @@ func (s *Service) Load() (Snapshot, error) {
 	if snapshot.Sources == nil {
 		snapshot.Sources = []SourceConfig{}
 	}
+	return snapshot, nil
+}
+
+func (s *Service) normalize(snapshot Snapshot) Snapshot {
 	// Older libraries kept logos only in the imported gallery.
 	for i := range snapshot.Games {
 		m := &snapshot.Games[i].Metadata
@@ -211,7 +230,7 @@ func (s *Service) Load() (Snapshot, error) {
 			}
 		}
 	}
-	return snapshot, nil
+	return snapshot
 }
 func (s *Service) Commit(token string) (Snapshot, error) {
 	s.mu.Lock()
@@ -243,35 +262,10 @@ func (s *Service) Commit(token string) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	delete(s.drafts, token)
+	snapshot.revision++
 	return snapshot, nil
 }
 
 func (s *Service) writeSnapshot(snapshot Snapshot) error {
-	data, err := json.MarshalIndent(snapshot, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err = os.MkdirAll(s.dir, 0700); err != nil {
-		return err
-	}
-	file, err := os.CreateTemp(s.dir, "library-*.tmp")
-	if err != nil {
-		return err
-	}
-	name := file.Name()
-	defer os.Remove(name)
-	if _, err = file.Write(data); err == nil {
-		err = file.Sync()
-	}
-	closeErr := file.Close()
-	if err != nil {
-		return err
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if err = os.Rename(name, filepath.Join(s.dir, "library.json")); err != nil {
-		return err
-	}
-	return nil
+	return s.saveSQLite(snapshot)
 }
